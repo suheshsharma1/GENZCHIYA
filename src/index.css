@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Josefin+Sans:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&family=Sacramento&family=JetBrains+Mono:wght@400;600&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Poppins', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --color-brand-emerald: #1B3B2B;
+  --color-brand-sage: #2C5E43;
+  --color-brand-mint: #E8F0EC;
+  --color-brand-amber: #D4A373;
+  --color-brand-amber-light: #F4EAE1;
+  --color-brand-gold: #E6AD45;
+  
+  --color-brand-cream: #FAF7F2;
+  --color-brand-cream-dark: #F4EFE6;
+  
+  --color-brand-dark-bg: #121815;
+  --color-brand-dark-card: #1A2420;
+  --color-brand-dark-border: #2D3A34;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-brand-cream);
+    color: #2D3A34;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body.dark {
+    background-color: var(--color-brand-dark-bg);
+    color: #E8F0EC;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+  }
+
+  .font-brand-serif {
+    font-family: var(--font-serif);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(44, 94, 67, 0.2);
+    border-radius: 4px;
+  }
+  body.dark ::-webkit-scrollbar-thumb {
+    background: rgba(232, 240, 236, 0.15);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(44, 94, 67, 0.4);
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism Styles */
+  .glass-light {
+    background: rgba(250, 247, 242, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(44, 94, 67, 0.08);
+  }
+
+  .glass-dark {
+    background: rgba(26, 36, 32, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(232, 240, 236, 0.06);
+  }
+
+  /* Hide default autofill background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: inherit;
+    -webkit-box-shadow: 0 0 0px 1000px transparent inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+/* Print Invoice Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+/* Animations for pulsing status */
+@keyframes softPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.pulse-animation {
+  animation: softPulse 2s infinite ease-in-out;
+}
