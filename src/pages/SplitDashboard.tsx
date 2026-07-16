@@ -7,13 +7,14 @@ import {
 } from 'recharts';
 import { 
   ShoppingBag, Users, DollarSign, Check, X, Printer, TrendingUp, 
-  TrendingDown, Plus, Edit2, LogOut, RefreshCw, BarChart2, Coffee, 
-  Layers, FileText, CheckCircle2, AlertCircle, Trash, Search, Settings,
-  Bell, LayoutGrid, List, ChefHat, Timer, BellRing, ChevronRight, QrCode, Download, Minus
+  TrendingDown, Plus, LogOut, RefreshCw, BarChart2, Coffee, 
+  Layers, FileText, CheckCircle2, AlertCircle, Trash, Search, Upload, Edit2,
+  Bell, LayoutGrid, List, ChefHat, Timer, BellRing, QrCode, Download, Minus,
+  Folder, FolderOpen, ChevronDown, ChevronRight
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useApp } from '../context/AppContext';
-import { Order, Product, OrderStatus } from '../types';
+import { Order, Product } from '../types';
 import { ReceiptPDF } from '../components/ReceiptPDF';
 import { downloadReceiptPDF } from '../utils/pdf';
 import { SVGLogo } from '../components/SVGLogo';
@@ -128,8 +129,10 @@ const TableQRCard: React.FC<TableCardProps> = ({ tableNumber, baseUrl }) => {
 export const SplitDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { 
-    orders, products, activeTable, updateOrderStatus, toggleProductAvailability, 
-    updateProductPrice, updateProductImage, deleteProduct, addProduct, getSalesReport, resetAllData, logoutStaff 
+    orders, products, categories, updateOrderStatus, toggleProductAvailability, 
+    updateProduct, updateProductImage, deleteProduct, deleteProducts, 
+    addCategory, renameCategory, deleteCategory, moveProductsToCategory,
+    getSalesReport, resetAllData, logoutStaff 
   } = useApp();
 
   // Layout Preference State (Split Screen vs Cashier Focus vs Kitchen Focus)
@@ -148,8 +151,6 @@ export const SplitDashboard: React.FC = () => {
   const [kitchenFilter, setKitchenFilter] = useState<'all' | 'preparing' | 'ready'>('all');
 
   // General Notification / Alert Sound state
-  const [showNewOrderPopup, setShowNewOrderPopup] = useState(false);
-  const [newOrderPopupData, setNewOrderPopupData] = useState<Order | null>(null);
   const prevPendingCountRef = useRef(0);
 
   // Kitchen alerts state
@@ -168,27 +169,58 @@ export const SplitDashboard: React.FC = () => {
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
 
   // Menu editor layout and configuration
-  const [menuViewMode, setMenuViewMode] = useState<'grid' | 'table'>('grid');
   const [menuSearch, setMenuSearch] = useState('');
-  const [menuFilterCategory, setMenuFilterCategory] = useState('all');
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
+
+  // Menu editor modal states
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [showEditImageModal, setShowEditImageModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
-  // Form states for adding/editing products
-  const [newProdName, setNewProdName] = useState('');
-  const [newProdPrice, setNewProdPrice] = useState(150);
-  const [newProdDesc, setNewProdDesc] = useState('');
-  const [newProdCat, setNewProdCat] = useState('tea');
-  const [newProdImg, setNewProdImg] = useState('');
-  const [newProdPrep, setNewProdPrep] = useState(5);
+  // Edit product form state
+  const [editProductId, setEditProductId] = useState('');
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdPrice, setEditProdPrice] = useState(0);
+  const [editProdCat, setEditProdCat] = useState('tea');
+  const [editProdDesc, setEditProdDesc] = useState('');
+  const [editProdPrep, setEditProdPrep] = useState(5);
+  const [editProductImage, setEditProductImage] = useState('');
 
+  // Edit image form state
   const [editingProductId, setEditingProductId] = useState('');
   const [editingProductName, setEditingProductName] = useState('');
   const [editImageURL, setEditImageURL] = useState('');
 
+  // Delete confirmation state
   const [deletingProductId, setDeletingProductId] = useState('');
   const [deletingProductName, setDeletingProductName] = useState('');
+
+  // Bulk delete state
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
+  // Category management state
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showRenameCategoryModal, setShowRenameCategoryModal] = useState(false);
+  const [renamingCategory, setRenamingCategory] = useState('');
+  const [renameCategoryValue, setRenameCategoryValue] = useState('');
+  const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
+  const [deletingCategoryName, setDeletingCategoryName] = useState('');
+  const [showBulkCategoryDeleteModal, setShowBulkCategoryDeleteModal] = useState(false);
+  const [showMoveCategoryModal, setShowMoveCategoryModal] = useState(false);
+  const [moveTargetCategory, setMoveTargetCategory] = useState('');
+
+  // Transient success toast
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimeoutRef = useRef<number | null>(null);
+
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    if (successTimeoutRef.current) window.clearTimeout(successTimeoutRef.current);
+    successTimeoutRef.current = window.setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   // Table QR count and base URL config states
   const [tableCount, setTableCount] = useState(25);
@@ -264,13 +296,7 @@ export const SplitDashboard: React.FC = () => {
 
   const COLORS = ['#5C2D91', '#2C5E43', '#D4A373'];
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(menuSearch.toLowerCase());
-      const matchCat = menuFilterCategory === 'all' || p.category === menuFilterCategory;
-      return matchSearch && matchCat;
-    });
-  }, [products, menuSearch, menuFilterCategory]);
+  // Search is applied per-category inside the folder rendering below.
 
   // Audio trigger
   const playOrderAlertSound = () => {
@@ -298,8 +324,6 @@ export const SplitDashboard: React.FC = () => {
     if (currentPendingCount > prevPendingCountRef.current && prevPendingCountRef.current > -1) {
       const newestPending = pendingOrders[pendingOrders.length - 1];
       if (newestPending) {
-        setNewOrderPopupData(newestPending);
-        setShowNewOrderPopup(true);
         playOrderAlertSound();
       }
     }
@@ -362,65 +386,17 @@ export const SplitDashboard: React.FC = () => {
     setShowRejectModal(false);
   };
 
-  // Add Product Submit
-  const handleAddProductSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProdName || !newProdPrice) return;
-    const imgUrl = newProdImg.trim() || "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=500&auto=format&fit=crop&q=80";
-    addProduct({
-      name: newProdName,
-      price: Number(newProdPrice),
-      description: newProdDesc,
-      category: newProdCat,
-      image: imgUrl,
-      preparationTime: Number(newProdPrep)
-    });
-    setNewProdName('');
-    setNewProdPrice(150);
-    setNewProdDesc('');
-    setNewProdImg('');
-    setNewProdPrep(5);
-    setShowAddProductModal(false);
-  };
-
-  // Edit Image Submission
-  const handleEditImage = (product: Product) => {
-    setEditingProductId(product.id);
-    setEditingProductName(product.name);
-    setEditImageURL(product.image);
-    setShowEditImageModal(true);
-  };
-
-  const handleEditImageSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProductId) return;
-    updateProductImage(editingProductId, editImageURL.trim());
-    setShowEditImageModal(false);
-    setEditingProductId('');
-  };
-
-  const handleDeleteProduct = (product: Product) => {
-    setDeletingProductId(product.id);
-    setDeletingProductName(product.name);
-    setShowDeleteConfirmModal(true);
-  };
-
-  const confirmDeleteProduct = () => {
-    if (deletingProductId) {
-      deleteProduct(deletingProductId);
-      setShowDeleteConfirmModal(false);
-      setDeletingProductId('');
-    }
-  };
-
   // Export CSV Report
+  // CSV Report Generator
   const handleExportCSV = () => {
     const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'served');
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Invoice ID,Date,Table,Customer Name,Subtotal,Discount,Grand Total,Payment Method,Status\n";
+
     completedOrders.forEach(o => {
       csvContent += `${o.id},"${new Date(o.createdAt).toLocaleDateString()}",${o.tableNumber},"${o.customerName}",${o.subtotal},${o.discount},${o.total},${o.payment.method},${o.status}\n`;
     });
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -430,9 +406,218 @@ export const SplitDashboard: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleEditProduct = (product: Product) => {
+    setEditProductId(product.id);
+    setEditProdName(product.name);
+    setEditProdPrice(product.price);
+    setEditProdCat(product.category);
+    setEditProdDesc(product.description);
+    setEditProdPrep(product.preparationTime);
+    setEditProductImage(product.image);
+    setShowEditProductModal(true);
+  };
+
+  const handleEditProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProductId || !editProdName || !editProdPrice) return;
+    updateProduct(editProductId, {
+      name: editProdName,
+      price: Number(editProdPrice),
+      category: editProdCat,
+      description: editProdDesc,
+      preparationTime: Number(editProdPrep),
+      image: editProductImage
+    });
+    setShowEditProductModal(false);
+    setEditProductId('');
+  };
+
+  const handleEditImage = (product: Product) => {
+    setEditingProductId(product.id);
+    setEditingProductName(product.name);
+    setEditImageURL(product.image);
+    setShowEditImageModal(true);
+  };
+
+  const handleEditFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImageURL(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditImageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProductId) return;
+    updateProductImage(editingProductId, editImageURL.trim());
+    setShowEditImageModal(false);
+    setEditingProductId('');
+    setEditingProductName('');
+    setEditImageURL('');
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    setDeletingProductId(product.id);
+    setDeletingProductName(product.name);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const confirmDeleteProduct = () => {
+    if (!deletingProductId) return;
+    const idToDelete = deletingProductId;
+    const name = deletingProductName;
+    deleteProduct(idToDelete);
+    setShowDeleteConfirmModal(false);
+    setSelectedProductIds(prev => prev.filter(id => id !== idToDelete));
+    setDeletingProductId('');
+    setDeletingProductName('');
+    showSuccess(`"${name}" deleted successfully.`);
+  };
+
+  // Bulk delete helpers
+  const toggleProductSelection = (id: string) => {
+    setSelectedProductIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedProductIds.length === 0) return;
+    setShowBulkDeleteModal(true);
+  };
+
+  const confirmBulkDelete = () => {
+    if (selectedProductIds.length === 0) return;
+    const count = selectedProductIds.length;
+    deleteProducts(selectedProductIds);
+    setSelectedProductIds([]);
+    setShowBulkDeleteModal(false);
+    showSuccess(`${count} product${count > 1 ? 's' : ''} deleted successfully.`);
+  };
+
+  // Category management helpers
+  const productCountByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => { map[p.category] = (map[p.category] || 0) + 1; });
+    return map;
+  }, [products]);
+
+  const categoryProducts = useMemo(() => {
+    const map: Record<string, Product[]> = {};
+    categories.forEach(c => { map[c] = []; });
+    products.forEach(p => {
+      if (!map[p.category]) map[p.category] = [];
+      map[p.category].push(p);
+    });
+    return map;
+  }, [products, categories]);
+
+  const toggleCategoryCollapse = (cat: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  };
+
+  const toggleCategorySelection = (cat: string) => {
+    const ids = (categoryProducts[cat] || []).map(p => p.id);
+    setSelectedCategoryIds(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+    // Selecting a category also selects (or clears) all products inside it
+    setSelectedProductIds(prev => {
+      const alreadyAll = ids.length > 0 && ids.every(id => prev.includes(id));
+      if (alreadyAll) {
+        return prev.filter(id => !ids.includes(id));
+      }
+      return Array.from(new Set([...prev, ...ids]));
+    });
+  };
+
+  const isCategoryPartiallySelected = (cat: string): boolean => {
+    const ids = (categoryProducts[cat] || []).map(p => p.id);
+    return ids.some(id => selectedProductIds.includes(id)) && !ids.every(id => selectedProductIds.includes(id));
+  };
+
+  const handleAddCategory = () => {
+    const created = addCategory(newCategoryName);
+    if (created) {
+      showSuccess(`Category "${newCategoryName.trim()}" created.`);
+      setShowAddCategoryModal(false);
+      setNewCategoryName('');
+    } else {
+      showSuccess('Category name already exists or is invalid.');
+    }
+  };
+
+  const handleRenameCategory = () => {
+    const ok = renameCategory(renamingCategory, renameCategoryValue);
+    if (ok) {
+      showSuccess(`Category renamed to "${renameCategoryValue.trim()}".`);
+    } else {
+      showSuccess('Category name already exists or is invalid.');
+    }
+    setShowRenameCategoryModal(false);
+    setRenamingCategory('');
+    setRenameCategoryValue('');
+  };
+
+  const handleDeleteCategory = () => {
+    const count = productCountByCategory[deletingCategoryName] || 0;
+    deleteCategory(deletingCategoryName);
+    setSelectedCategoryIds(prev => prev.filter(c => c !== deletingCategoryName));
+    setShowDeleteCategoryModal(false);
+    setDeletingCategoryName('');
+    showSuccess(count > 0
+      ? `Category deleted. ${count} product${count > 1 ? 's' : ''} removed.`
+      : 'Category deleted.');
+  };
+
+  const handleBulkCategoryDelete = () => {
+    if (selectedCategoryIds.length === 0) return;
+    const count = selectedCategoryIds.length;
+    let productCount = 0;
+    selectedCategoryIds.forEach(c => { productCount += productCountByCategory[c] || 0; });
+    selectedCategoryIds.forEach(c => deleteCategory(c));
+    setSelectedCategoryIds([]);
+    setShowBulkCategoryDeleteModal(false);
+    showSuccess(`${count} categor${count > 1 ? 'ies' : 'y'} deleted. ${productCount} product${productCount === 1 ? '' : 's'} removed.`);
+  };
+
+  const handleMoveProducts = () => {
+    if (!moveTargetCategory || selectedProductIds.length === 0) return;
+    moveProductsToCategory(selectedProductIds, moveTargetCategory);
+    showSuccess(`Moved ${selectedProductIds.length} product${selectedProductIds.length > 1 ? 's' : ''} to ${moveTargetCategory}.`);
+    setSelectedProductIds([]);
+    setShowMoveCategoryModal(false);
+    setMoveTargetCategory('');
+  };
+
   return (
     <div className="min-h-screen bg-brand-cream dark:bg-brand-dark-bg text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
-      
+
+      {/* Transient success toast */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
+          >
+            <div className="flex items-center gap-2 bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg">
+              <CheckCircle2 size={14} />
+              <span>{successMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── HEADER & NAVIGATION CONTROLLER ── */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-brand-dark-card/90 backdrop-blur-md border-b border-slate-200/60 dark:border-brand-dark-border/40 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3">
@@ -645,119 +830,205 @@ export const SplitDashboard: React.FC = () => {
             {cashierTab === 'menu' && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch">
-                  <div className="flex gap-1.5 flex-1">
-                    <div className="relative flex-1">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={menuSearch}
-                        onChange={(e) => setMenuSearch(e.target.value)}
-                        placeholder="Search menu..."
-                        className="w-full pl-9 pr-3 py-1.5 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs"
-                      />
-                    </div>
-                    <select
-                      value={menuFilterCategory}
-                      onChange={(e) => setMenuFilterCategory(e.target.value)}
-                      className="px-2.5 py-1.5 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-[11px] font-bold"
-                    >
-                      <option value="all">All</option>
-                      <option value="tea">Tea</option>
-                      <option value="coffee">Coffee</option>
-                      <option value="cold-drinks">Cold Drinks</option>
-                      <option value="snacks">Snacks</option>
-                      <option value="sandwich">Sandwiches</option>
-                      <option value="burger">Burgers</option>
-                      <option value="pizza">Pizza</option>
-                      <option value="bakery">Bakery</option>
-                    </select>
+                  <div className="relative flex-1">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={menuSearch}
+                      onChange={(e) => setMenuSearch(e.target.value)}
+                      placeholder="Search menu..."
+                      className="w-full pl-9 pr-3 py-1.5 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs"
+                    />
                   </div>
+                  <button
+                    onClick={() => { setNewCategoryName(''); setShowAddCategoryModal(true); }}
+                    className="flex items-center gap-1.5 bg-brand-emerald hover:bg-brand-sage text-white font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <Plus size={12} />
+                    <span>New Category</span>
+                  </button>
+                </div>
 
-                  <div className="flex gap-1.5 items-center justify-between">
-                    <div className="bg-slate-100 dark:bg-brand-dark-bg p-0.5 rounded-xl flex border border-slate-200/40 dark:border-brand-dark-border/20">
-                      <button onClick={() => setMenuViewMode('grid')} className={`p-1.5 rounded-lg transition-all cursor-pointer ${menuViewMode === 'grid' ? 'bg-white dark:bg-brand-dark-card text-brand-emerald dark:text-brand-amber shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={12} /></button>
-                      <button onClick={() => setMenuViewMode('table')} className={`p-1.5 rounded-lg transition-all cursor-pointer ${menuViewMode === 'table' ? 'bg-white dark:bg-brand-dark-card text-brand-emerald dark:text-brand-amber shadow-sm' : 'text-slate-400'}`}><List size={12} /></button>
-                    </div>
-                    <button onClick={() => setShowAddProductModal(true)} className="bg-brand-emerald hover:bg-brand-sage text-white font-bold text-xs py-2 px-3 rounded-xl shadow flex items-center gap-1.5 cursor-pointer">
-                      <Plus size={12} className="stroke-[3]" />
-                      <span>Add</span>
+                {/* Bulk product delete action bar */}
+                <div className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 border transition-all ${selectedProductIds.length > 0 ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40' : 'bg-slate-50 dark:bg-brand-dark-bg/50 border-slate-200/60 dark:border-brand-dark-border/30'}`}>
+                  <span className={`text-[11px] font-bold ${selectedProductIds.length > 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {selectedProductIds.length > 0
+                      ? `${selectedProductIds.length} product${selectedProductIds.length > 1 ? 's' : ''} selected`
+                      : 'No products selected'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowMoveCategoryModal(true)}
+                      disabled={selectedProductIds.length === 0}
+                      className="bg-brand-amber hover:bg-brand-gold disabled:opacity-40 disabled:cursor-not-allowed text-brand-dark-bg font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Folder size={11} />
+                      <span>Move</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedProductIds([])}
+                      disabled={selectedProductIds.length === 0}
+                      className="text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={selectedProductIds.length === 0}
+                      className="bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[11px] py-1.5 px-3.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash size={11} />
+                      <span>Delete Selected</span>
                     </button>
                   </div>
                 </div>
 
-                {menuViewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {filteredProducts.map(p => (
-                      <div key={p.id} className="bg-white dark:bg-brand-dark-card rounded-2xl overflow-hidden shadow-sm border border-slate-200/50 dark:border-brand-dark-border/40 flex flex-col justify-between text-left group">
-                        <div className="relative aspect-video overflow-hidden bg-slate-100">
-                          <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                          <span className="absolute top-2 left-2 bg-brand-emerald text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">{p.category}</span>
+                {/* Bulk category delete action bar */}
+                <div className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 border transition-all ${selectedCategoryIds.length > 0 ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40' : 'bg-slate-50 dark:bg-brand-dark-bg/50 border-slate-200/60 dark:border-brand-dark-border/30'}`}>
+                  <span className={`text-[11px] font-bold ${selectedCategoryIds.length > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {selectedCategoryIds.length > 0
+                      ? `${selectedCategoryIds.length} categor${selectedCategoryIds.length > 1 ? 'ies' : 'y'} selected`
+                      : 'No categories selected'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedCategoryIds([])}
+                      disabled={selectedCategoryIds.length === 0}
+                      className="text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setShowBulkCategoryDeleteModal(true)}
+                      disabled={selectedCategoryIds.length === 0}
+                      className="bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[11px] py-1.5 px-3.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash size={11} />
+                      <span>Delete Selected Categories</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Category folders */}
+                <div className="space-y-3">
+                  {categories.map(cat => {
+                    const isCollapsed = collapsedCategories.has(cat);
+                    const count = productCountByCategory[cat] || 0;
+                    const catSelected = selectedCategoryIds.includes(cat);
+                    const catProducts = (categoryProducts[cat] || []).filter(p =>
+                      p.name.toLowerCase().includes(menuSearch.toLowerCase())
+                    );
+                    const visibleCount = catProducts.length;
+                    const catProductIds = (categoryProducts[cat] || []).map(p => p.id);
+                    const allProductsSelected = catProductIds.length > 0 && catProductIds.every(id => selectedProductIds.includes(id));
+                    const catCheckboxChecked = catSelected || allProductsSelected;
+                    return (
+                      <div key={cat} className={`bg-white dark:bg-brand-dark-card rounded-2xl border shadow-sm overflow-hidden ${catSelected ? 'border-brand-amber dark:border-brand-amber ring-2 ring-brand-amber/30' : 'border-slate-200/50 dark:border-brand-dark-border/40'}`}>
+                        {/* Folder header */}
+                        <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50/70 dark:bg-brand-dark-bg/40 border-b border-slate-100 dark:border-slate-800">
+                          <label className="flex items-center justify-center w-5 h-5 rounded-md bg-white dark:bg-brand-dark-bg border border-slate-200 dark:border-brand-dark-border cursor-pointer shadow-sm hover:bg-white">
+                            <input
+                              type="checkbox"
+                              checked={catCheckboxChecked}
+                              ref={(el) => { if (el) el.indeterminate = isCategoryPartiallySelected(cat); }}
+                              onChange={() => toggleCategorySelection(cat)}
+                              className="w-3.5 h-3.5 accent-brand-amber dark:accent-brand-amber cursor-pointer"
+                            />
+                          </label>
+                          <button onClick={() => toggleCategoryCollapse(cat)} className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer">
+                            {isCollapsed ? <ChevronRight size={16} className="text-slate-400 shrink-0" /> : <ChevronDown size={16} className="text-slate-400 shrink-0" />}
+                            {isCollapsed ? <Folder size={16} className="text-brand-amber shrink-0" /> : <FolderOpen size={16} className="text-brand-amber shrink-0" />}
+                            <span className="font-extrabold text-sm text-slate-800 dark:text-white capitalize truncate">{cat}</span>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-brand-dark-bg px-2 py-0.5 rounded-full shrink-0">{count}</span>
+                          </button>
+                          <button
+                            onClick={() => { setRenamingCategory(cat); setRenameCategoryValue(cat); setShowRenameCategoryModal(true); }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-brand-dark-bg/60 cursor-pointer"
+                            title="Rename Category"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => { setDeletingCategoryName(cat); setShowDeleteCategoryModal(true); }}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer"
+                            title="Delete Category"
+                          >
+                            <Trash size={12} />
+                          </button>
                         </div>
-                        <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
-                          <div>
-                            <div className="flex justify-between items-start gap-1">
-                              <h4 className="font-extrabold text-xs text-slate-800 dark:text-white line-clamp-1">{p.name}</h4>
-                              <span className="font-black text-brand-emerald dark:text-brand-amber text-[10px] shrink-0">{formatRs(p.price)}</span>
-                            </div>
-                            <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-2 h-6">{p.description}</p>
+
+                        {/* Folder contents */}
+                        {!isCollapsed && (
+                          <div className="p-3">
+                            {visibleCount === 0 ? (
+                              <p className="text-center text-[11px] text-slate-400 py-4">
+                                {count === 0 ? 'No products in this category yet.' : 'No products match your search.'}
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {catProducts.map(p => {
+                                  const isSelected = selectedProductIds.includes(p.id);
+                                  return (
+                                  <div key={p.id} className={`rounded-xl overflow-hidden shadow-sm border flex flex-col justify-between text-left group ${isSelected ? 'border-brand-emerald dark:border-brand-amber ring-2 ring-brand-emerald/30 dark:ring-brand-amber/30' : 'border-slate-200/50 dark:border-brand-dark-border/40'}`}>
+                                    <div className="relative aspect-video overflow-hidden bg-slate-100">
+                                      <label className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded-md bg-white/85 dark:bg-brand-dark-bg/85 backdrop-blur-sm border border-slate-200 dark:border-brand-dark-border cursor-pointer shadow-sm hover:bg-white">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => toggleProductSelection(p.id)}
+                                          className="w-3.5 h-3.5 accent-brand-emerald dark:accent-brand-amber cursor-pointer"
+                                        />
+                                      </label>
+                                      {p.image ? (
+                                        <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600 text-[9px] font-semibold">No Image</div>
+                                      )}
+                                      {!p.available && (
+                                        <span className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">Out of Stock</span>
+                                      )}
+                                    </div>
+                                    <div className="p-2.5 flex-1 flex flex-col justify-between space-y-2">
+                                      <div>
+                                        <div className="flex justify-between items-start gap-1">
+                                          <h4 className="font-extrabold text-[11px] text-slate-800 dark:text-white line-clamp-1">{p.name}</h4>
+                                          <span className="font-black text-brand-emerald dark:text-brand-amber text-[10px] shrink-0">{formatRs(p.price)}</span>
+                                        </div>
+                                        <p className="text-[8px] text-slate-400 mt-0.5 line-clamp-2 h-5">{p.description}</p>
+                                      </div>
+                                      <div className="flex gap-1 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                                        <button onClick={() => handleEditProduct(p)} className="flex-1 py-1 px-1 border border-slate-200 dark:border-brand-dark-border hover:bg-slate-50 dark:hover:bg-brand-dark-bg/40 rounded-lg text-slate-600 dark:text-slate-300 text-[8px] font-bold flex items-center justify-center gap-0.5 cursor-pointer" title="Edit">
+                                          <Edit2 size={8} /> Edit
+                                        </button>
+                                        <button onClick={() => handleEditImage(p)} className="p-1 border border-slate-200 dark:border-brand-dark-border hover:bg-slate-50 dark:hover:bg-brand-dark-bg/40 rounded-lg text-slate-600 dark:text-slate-300 cursor-pointer" title="Upload Image"><Upload size={8} /></button>
+                                        <button
+                                          onClick={() => toggleProductAvailability(p.id)}
+                                          className={`px-1.5 py-1 rounded-lg text-[7px] font-black uppercase cursor-pointer ${p.available ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'}`}
+                                          title="Toggle Stock"
+                                        >
+                                          {p.available ? 'In' : 'Out'}
+                                        </button>
+                                        <button onClick={() => handleDeleteProduct(p)} className="p-1 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-red-500 cursor-pointer" title="Delete"><Trash size={8} /></button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-1.5 mt-1">
-                            <span className="text-[9px] text-slate-400 font-semibold">Prep: {p.preparationTime}m</span>
-                            <button onClick={() => toggleProductAvailability(p.id)} className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase cursor-pointer ${p.available ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'}`}>
-                              {p.available ? 'In Stock' : 'Out'}
-                            </button>
-                          </div>
-                          <div className="flex gap-1 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                            <button onClick={() => {
-                              const newPrice = prompt(`New price for ${p.name}:`, String(p.price));
-                              if (newPrice && !isNaN(Number(newPrice))) updateProductPrice(p.id, Number(newPrice));
-                            }} className="flex-1 py-1 px-1 border border-slate-200 dark:border-brand-dark-border hover:bg-slate-50 dark:hover:bg-brand-dark-bg/40 rounded-lg text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-0.5 cursor-pointer">
-                              <Edit2 size={8} /><span>Price</span>
-                            </button>
-                            <button onClick={() => handleEditImage(p)} className="p-1 border border-slate-200 dark:border-brand-dark-border hover:bg-slate-50 dark:hover:bg-brand-dark-bg/40 rounded-lg text-slate-600 dark:text-slate-300 cursor-pointer" title="Edit Image"><Settings size={9} /></button>
-                            <button onClick={() => handleDeleteProduct(p)} className="p-1 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-red-500 cursor-pointer" title="Delete"><Trash size={9} /></button>
-                          </div>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-brand-dark-card rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-[11px] border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-brand-dark-bg text-slate-400 font-bold uppercase border-b border-slate-100 dark:border-brand-dark-border/30">
-                          <th className="p-3">Item Details</th>
-                          <th className="p-3">Category</th>
-                          <th className="p-3">Price</th>
-                          <th className="p-3 text-center">Status</th>
-                          <th className="p-3 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProducts.map(p => (
-                          <tr key={p.id} className="border-b border-slate-100 dark:border-brand-dark-border/20 hover:bg-slate-50/50 dark:hover:bg-white/5">
-                            <td className="p-3 font-extrabold">{p.name}</td>
-                            <td className="p-3 text-slate-400 capitalize">{p.category}</td>
-                            <td className="p-3 font-mono font-bold">{formatRs(p.price)}</td>
-                            <td className="p-3 text-center">
-                              <button onClick={() => toggleProductAvailability(p.id)} className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase cursor-pointer ${p.available ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'}`}>
-                                {p.available ? 'In Stock' : 'Out'}
-                              </button>
-                            </td>
-                            <td className="p-3 flex justify-center gap-1.5">
-                              <button onClick={() => {
-                                const newPrice = prompt(`New price for ${p.name}:`, String(p.price));
-                                if (newPrice && !isNaN(Number(newPrice))) updateProductPrice(p.id, Number(newPrice));
-                              }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-300" title="Edit Price"><Edit2 size={10} /></button>
-                              <button onClick={() => handleEditImage(p)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-300" title="Edit Image"><Settings size={10} /></button>
-                              <button onClick={() => handleDeleteProduct(p)} className="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 rounded text-red-500" title="Delete"><Trash size={10} /></button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                    );
+                  })}
+
+                  {categories.length === 0 && (
+                    <div className="text-center py-16 bg-white dark:bg-brand-dark-card rounded-3xl border border-dashed border-slate-200 dark:border-brand-dark-border/60">
+                      <Folder size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                      <p className="text-slate-400 text-[11px] font-semibold">No categories. Create one to start adding products.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -978,7 +1249,24 @@ export const SplitDashboard: React.FC = () => {
                   <button onClick={() => setKitchenNewOrderAlert(false)} className="text-[10px] font-black text-brand-dark-bg hover:underline cursor-pointer">Dismiss</button>
                 </motion.div>
               )}
-            </AnimatePresence>
+        {/* Bulk Delete Confirmation Modal */}
+        {showBulkDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBulkDeleteModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-red-500 uppercase tracking-wider mb-2">Delete Selected Products</h4>
+              <p className="text-xs text-slate-400 mb-4">
+                Are you sure you want to delete <span className="font-bold text-slate-800 dark:text-white">{selectedProductIds.length}</span> product{selectedProductIds.length > 1 ? 's' : ''}? This action is permanent.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={confirmBulkDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Delete</button>
+                <button onClick={() => setShowBulkDeleteModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+      </AnimatePresence>
 
             {/* Kitchen Tickets Grid */}
             {displayedKitchenTickets.length === 0 ? (
@@ -1130,75 +1418,108 @@ export const SplitDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Add Product Modal */}
-        {showAddProductModal && (
+        {/* Edit Product Modal */}
+        {showEditProductModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddProductModal(false)} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditProductModal(false)} />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
-              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Add Menu Item</h4>
-              <form onSubmit={handleAddProductSubmit} className="space-y-3">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Edit Product</h4>
+              <form onSubmit={handleEditProductSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Name</label>
+                  <input type="text" required value={editProdName} onChange={(e) => setEditProdName(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Item Name</label>
-                    <input type="text" required value={newProdName} onChange={(e) => setNewProdName(e.target.value)} placeholder="E.g. Mint Spiced Tea" className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-                  </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-400 uppercase">Price (Rs.)</label>
-                    <input type="number" required value={newProdPrice} onChange={(e) => setNewProdPrice(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
-                    <select value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none">
-                      <option value="tea">Tea</option>
-                      <option value="coffee">Coffee</option>
-                      <option value="cold-drinks">Cold Drinks</option>
-                      <option value="snacks">Snacks</option>
-                      <option value="sandwich">Sandwiches</option>
-                      <option value="burger">Burgers</option>
-                      <option value="pizza">Pizza</option>
-                      <option value="bakery">Bakery</option>
-                    </select>
+                    <input type="number" required value={editProdPrice} onChange={(e) => setEditProdPrice(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-400 uppercase">Prep Time (mins)</label>
-                    <input type="number" required value={newProdPrep} onChange={(e) => setNewProdPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                    <input type="number" required value={editProdPrep} onChange={(e) => setEditProdPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
                   </div>
                 </div>
-
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
+                  <select value={editProdCat} onChange={(e) => setEditProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none">
+                    <option value="tea">Tea</option>
+                    <option value="coffee">Coffee</option>
+                    <option value="cold-drinks">Cold Drinks</option>
+                  </select>
+                </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Description</label>
-                  <input type="text" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} placeholder="Description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  <input type="text" value={editProdDesc} onChange={(e) => setEditProdDesc(e.target.value)} placeholder="Description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
                 </div>
-
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Image URL (Optional)</label>
-                  <input type="text" value={newProdImg} onChange={(e) => setNewProdImg(e.target.value)} placeholder="https://images.unsplash.com/..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Image</label>
+                  <label htmlFor="split-edit-prod-image" className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-200 dark:border-brand-dark-border rounded-xl cursor-pointer hover:border-brand-emerald dark:hover:border-brand-amber transition-colors overflow-hidden relative bg-slate-50 dark:bg-brand-dark-bg group">
+                    {editProductImage ? (
+                      <>
+                        <img src={editProductImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-[10px] font-bold">Click to change</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 pointer-events-none">
+                        <Upload size={16} className="text-slate-300 dark:text-slate-600" />
+                        <span className="text-[10px] text-slate-400 font-semibold">Click to upload photo</span>
+                        <span className="text-[9px] text-slate-300 dark:text-slate-600">JPG, PNG, WEBP supported</span>
+                      </div>
+                    )}
+                    <input
+                      id="split-edit-prod-image"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setEditProductImage(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
-
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
-                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Save Item</button>
-                  <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Save Changes</button>
+                  <button type="button" onClick={() => setShowEditProductModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
 
-        {/* Edit Image Modal */}
+        {/* Edit Image (quick) Modal */}
         {showEditImageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditImageModal(false)} />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
-              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Edit Product Image</h4>
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Change Product Image</h4>
               <p className="text-xs text-slate-400 mb-3">Product: <span className="font-bold text-slate-800 dark:text-white">{editingProductName}</span></p>
-              
               <form onSubmit={handleEditImageSubmit} className="space-y-3">
-                <input type="text" value={editImageURL} onChange={(e) => setEditImageURL(e.target.value)} placeholder="https://images.unsplash.com/..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                <label htmlFor="split-edit-image-upload" className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 dark:border-brand-dark-border rounded-xl cursor-pointer hover:border-brand-emerald dark:hover:border-brand-amber transition-colors overflow-hidden relative bg-slate-50 dark:bg-brand-dark-bg group">
+                  {editImageURL ? (
+                    <>
+                      <img src={editImageURL} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">Click to change</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5 pointer-events-none">
+                      <Upload size={18} className="text-slate-300 dark:text-slate-600" />
+                      <span className="text-xs text-slate-400 font-semibold">Click to upload photo</span>
+                      <span className="text-[10px] text-slate-300 dark:text-slate-600">JPG, PNG, WEBP supported</span>
+                    </div>
+                  )}
+                  <input id="split-edit-image-upload" type="file" accept="image/*" className="hidden" onChange={handleEditFileUpload} />
+                </label>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
-                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Update</button>
+                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Update Image</button>
                   <button type="button" onClick={() => setShowEditImageModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
                 </div>
               </form>
@@ -1212,14 +1533,145 @@ export const SplitDashboard: React.FC = () => {
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirmModal(false)} />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
               <h4 className="font-bold text-sm text-red-500 uppercase tracking-wider mb-2">Delete Product</h4>
-              <p className="text-xs text-slate-400 mb-4">Delete <span className="font-bold text-slate-800 dark:text-white">{deletingProductName}</span>? This action is permanent.</p>
+              <p className="text-xs text-slate-400 mb-4">Are you sure you want to delete this product?<span className="font-bold text-slate-800 dark:text-white"> {deletingProductName}</span></p>
+                <div className="flex gap-2">
+                  <button onClick={confirmDeleteProduct} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Delete</button>
+                  <button onClick={() => setShowDeleteConfirmModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+                </div>
+              </motion.div>
+            </div>
+        )}
+
+        {/* Add Category Modal */}
+        {showAddCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddCategoryModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">New Category</h4>
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}
+                placeholder="e.g. Desserts"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-sage mb-3"
+                autoFocus
+              />
               <div className="flex gap-2">
-                <button onClick={confirmDeleteProduct} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Delete</button>
-                <button onClick={() => setShowDeleteConfirmModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+                <button onClick={handleAddCategory} className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Create</button>
+                <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); }} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
               </div>
             </motion.div>
           </div>
         )}
+
+        {/* Rename Category Modal */}
+        {showRenameCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRenameCategoryModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Rename Category</h4>
+              <p className="text-xs text-slate-400 mb-3">Current name: <span className="font-bold text-slate-800 dark:text-white capitalize">{renamingCategory}</span></p>
+              <input
+                type="text"
+                value={renameCategoryValue}
+                onChange={(e) => setRenameCategoryValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleRenameCategory(); }}
+                placeholder="New category name"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-sage mb-3"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button onClick={handleRenameCategory} className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Rename</button>
+                <button onClick={() => { setShowRenameCategoryModal(false); setRenamingCategory(''); setRenameCategoryValue(''); }} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Delete Category Confirmation Modal */}
+        {showDeleteCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteCategoryModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-red-500 uppercase tracking-wider mb-2">Delete Category</h4>
+              <p className="text-xs text-slate-400 mb-4">
+                Are you sure you want to delete the entire '<span className="font-bold text-slate-800 dark:text-white capitalize">{deletingCategoryName}</span>' category? This will permanently delete all products in this category.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleDeleteCategory} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Delete</button>
+                <button onClick={() => setShowDeleteCategoryModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Bulk Category Delete Confirmation Modal */}
+        {showBulkCategoryDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBulkCategoryDeleteModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-red-500 uppercase tracking-wider mb-2">Delete Selected Categories</h4>
+              <p className="text-xs text-slate-400 mb-4">
+                Are you sure you want to delete <span className="font-bold text-slate-800 dark:text-white">{selectedCategoryIds.length}</span> categor{selectedCategoryIds.length > 1 ? 'ies' : 'y'}? This will permanently delete all products inside them.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleBulkCategoryDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Delete</button>
+                <button onClick={() => setShowBulkCategoryDeleteModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Move Products to Category Modal */}
+        {showMoveCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMoveCategoryModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-2">Move Products</h4>
+              <p className="text-xs text-slate-400 mb-4">
+                Move {selectedProductIds.length} selected product{selectedProductIds.length > 1 ? 's' : ''} to:
+              </p>
+              <select
+                value={moveTargetCategory}
+                onChange={(e) => setMoveTargetCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-sage mb-4 capitalize"
+              >
+                <option value="">Select category...</option>
+                {categories.map(c => (
+                  <option key={c} value={c} className="capitalize">{c}</option>
+                ))}
+                <option value="__new__">+ Create new category...</option>
+              </select>
+              {moveTargetCategory === '__new__' && (
+                <input
+                  type="text"
+                  value={renameCategoryValue}
+                  onChange={(e) => setMoveTargetCategory(e.target.value.trim().toLowerCase())}
+                  placeholder="New category name"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-sage mb-4"
+                  autoFocus
+                />
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleMoveProducts}
+                  disabled={!moveTargetCategory || moveTargetCategory === '__new__'}
+                  className="flex-1 bg-brand-amber hover:bg-brand-gold disabled:opacity-40 disabled:cursor-not-allowed text-brand-dark-bg font-bold py-2 rounded-xl text-xs cursor-pointer"
+                >
+                  Move
+                </button>
+                <button
+                  onClick={() => { setShowMoveCategoryModal(false); setMoveTargetCategory(''); setRenameCategoryValue(''); }}
+                  className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
       </AnimatePresence>
 
       {/* Hidden print invoice container */}

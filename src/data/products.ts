@@ -740,13 +740,5 @@ export const CATEGORY_MAP: Record<string, string> = {
   "all": "All Items",
   "tea": "Tea",
   "coffee": "Coffee",
-  "cold-drinks": "Cold Drinks",
-  "snacks": "Snacks",
-  "sandwich": "Sandwiches",
-  "burger": "Burgers",
-  "pizza": "Pizza",
-  "noodles": "Noodles",
-  "pasta": "Pasta",
-  "bakery": "Bakery & Desserts",
-  "breakfast": "Breakfast"
+  "cold-drinks": "Cold Drinks"
 };

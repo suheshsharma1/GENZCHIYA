@@ -1,26 +1,4 @@
-import React from 'react';
-
-interface SVGLogoProps {
-  className?: string;
-  variant?: 'full' | 'icon' | 'dark' | 'light';
-  size?: number;
-}
-
-export const SVGLogo: React.FC<SVGLogoProps> = ({ 
-  className = '', 
-  variant = 'full', 
-  size = 40 
-}) => {
-  const isIcon = variant === 'icon';
-  const isDark = variant === 'dark';
-  
-  const darkBrown = '#3E2723';
-  const teaColor = '#6D4C41';
-  const oliveGreen = '#5E7043';
-  const whiteContrast = '#FAF7F2';
-
-  const logoSvg = (
-    <svg
+<svg
       width={isIcon ? size : '100%'}
       height={isIcon ? size : 'auto'}
       viewBox="0 0 500 340"
@@ -155,13 +133,3 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
         </g>
       )}
     </svg>
-  );
-
-  return (
-    <div className={`inline-flex items-center ${className}`}>
-      {logoSvg}
-    </div>
-  );
-};
-
-export default SVGLogo;

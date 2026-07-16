@@ -59,10 +59,6 @@ export const AboutPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300 flex flex-col overflow-x-hidden">
-      {/* Background Graphics */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-sage/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-brand-amber/5 rounded-full blur-3xl pointer-events-none" />
-
       {/* Header */}
       <header className="px-6 py-4 flex justify-between items-center z-10">
         <button

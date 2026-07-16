@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
-import { 
-  User, Monitor, ChefHat, 
-  ChevronDown, Sparkles, Shield 
+import {
+  User, Monitor,
+  Sparkles, Shield, X
 } from 'lucide-react';
+import { SVGLogo } from './SVGLogo';
 
 type Panel = {
   key: 'customer' | 'cashier' | 'kitchen';
@@ -47,12 +48,58 @@ const PANELS: Panel[] = [
   },
 ];
 
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+const BUBBLE = 56; // bubble diameter
+const POS_KEY = 'gc_demo_switcher_pos';
+const DEFAULT_MARGIN_X = 16;
+const DEFAULT_MARGIN_BOTTOM = 88;
+
 export const DemoSwitcher: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const { userRole, setUserRole: _setUserRole } = useApp();
+  const { userRole } = useApp();
   const location = useLocation();
 
   const activePanel = PANELS.find(p => p.key === userRole) ?? PANELS[0];
+
+  // Draggable position (top-left of the bubble). Persisted across the page session + reload.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef(false);
+  const movedRef = useRef(false);
+  const offsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+  const posRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  const defaultPos = useCallback(() => ({
+    x: clamp(window.innerWidth - BUBBLE - DEFAULT_MARGIN_X, 8, window.innerWidth - BUBBLE - 8),
+    y: clamp(window.innerHeight - BUBBLE - DEFAULT_MARGIN_BOTTOM, 8, window.innerHeight - BUBBLE - 8)
+  }), []);
+
+  // Load saved position (or default), then keep it in sync with the viewport.
+  useEffect(() => {
+    let initial = defaultPos();
+    try {
+      const saved = localStorage.getItem(POS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') initial = parsed;
+      }
+    } catch { /* ignore corrupt value */ }
+    setPos(initial);
+
+    const onResize = () => {
+      const cur = posRef.current ?? defaultPos();
+      setPos({
+        x: clamp(cur.x, 8, window.innerWidth - BUBBLE - 8),
+        y: clamp(cur.y, 8, window.innerHeight - BUBBLE - 8)
+      });
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [defaultPos]);
+
+  const persistPos = useCallback((p: { x: number; y: number }) => {
+    try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+  }, []);
 
   const switchTo = (panel: Panel) => {
     localStorage.setItem('gc_user_role', panel.key);
@@ -60,161 +107,160 @@ export const DemoSwitcher: React.FC = () => {
     window.location.href = panel.route;
   };
 
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (open) return; // don't drag while the panel is open
+    draggingRef.current = true;
+    movedRef.current = false;
+    const cur = posRef.current ?? defaultPos();
+    offsetRef.current = { dx: e.clientX - cur.x, dy: e.clientY - cur.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    movedRef.current = true;
+    const next = {
+      x: clamp(e.clientX - offsetRef.current.dx, 8, window.innerWidth - BUBBLE - 8),
+      y: clamp(e.clientY - offsetRef.current.dy, 8, window.innerHeight - BUBBLE - 8)
+    };
+    setPos(next);
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    const wasDragging = draggingRef.current;
+    draggingRef.current = false;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    const cur = posRef.current;
+    if (cur) persistPos(cur);
+    // Suppress the click that follows a drag so the bubble doesn't toggle open
+    if (wasDragging && movedRef.current) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleBubbleClick = () => {
+    if (movedRef.current) { movedRef.current = false; return; }
+    setOpen(prev => !prev);
+  };
+
+  // Collapse when clicking outside the expanded panel
+  useEffect(() => {
+    if (!open) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-demo-switcher]')) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [open]);
+
   if (location.pathname === '/') return null;
 
   return (
-    <div className="fixed bottom-6 left-6 z-[9999] select-none font-sans">
+    <div
+      data-demo-switcher
+      className="fixed z-[9999] select-none font-sans"
+      style={{ left: pos?.x ?? defaultPos().x, top: pos?.y ?? defaultPos().y }}
+    >
       <AnimatePresence>
         {open && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
-            />
-
-            {/* Panel Card */}
-            <motion.div
-              key="panel"
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.95 }}
-              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-              className="mb-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden w-72"
-            >
-              {/* Header */}
-              <div className="px-5 py-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-30">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+          <motion.div
+            key="panel"
+            initial={{ opacity: 0, scale: 0.9, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 8 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="absolute bottom-[64px] right-0 w-60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden origin-bottom-right"
+          >
+            {/* Header */}
+            <div className="px-3.5 py-2.5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden flex items-center justify-between">
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full blur-2xl" />
+              </div>
+              <div className="relative flex items-center gap-2">
+                <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <Sparkles size={13} className="text-white" />
                 </div>
-                <div className="relative flex items-center gap-2.5">
-                  <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
-                    <Sparkles size={16} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Demo Mode</p>
-                    <p className="text-sm font-black text-white tracking-tight">GENZCHIYA System</p>
-                  </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.2em] font-bold text-slate-400">Demo Mode</p>
+                  <p className="text-xs font-black text-white tracking-tight">GENZCHIYA System</p>
                 </div>
               </div>
+              <button
+                onClick={() => setOpen(false)}
+                title="Close"
+                className="relative z-10 w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
+              >
+                <X size={13} />
+              </button>
+            </div>
 
-              {/* Role Options */}
-              <div className="p-3 space-y-2">
-                {PANELS.map((panel) => {
-                  const isActive = userRole === panel.key;
-                  const Icon = panel.icon;
-                  return (
-                    <button
-                      key={panel.key}
-                      onClick={() => switchTo(panel)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all cursor-pointer text-left relative overflow-hidden group ${
-                        isActive
-                          ? `${panel.activeBg} text-white shadow-lg`
-                          : `bg-gradient-to-br ${panel.gradient} hover:scale-[1.02] border ${panel.border}`
-                      }`}
-                    >
-                      {/* Active shimmer effect */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                      )}
+            {/* Role Options */}
+            <div className="p-2 space-y-1.5">
+              {PANELS.map((panel) => {
+                const isActive = userRole === panel.key;
+                const Icon = panel.icon;
+                return (
+                  <button
+                    key={panel.key}
+                    onClick={() => switchTo(panel)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer text-left relative overflow-hidden group ${
+                      isActive
+                        ? `${panel.activeBg} text-white shadow`
+                        : `bg-gradient-to-br ${panel.gradient} hover:scale-[1.02] border ${panel.border}`
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg shrink-0 ${isActive ? 'bg-white/20' : 'bg-white dark:bg-slate-800'}`}>
+                      <Icon size={15} className={isActive ? 'text-white' : 'text-slate-700 dark:text-slate-200'} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[11px] font-bold leading-tight ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                        {panel.label}
+                      </p>
+                      <p className={`text-[9px] font-medium leading-tight ${isActive ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {panel.description}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-                      <div className={`p-2 rounded-xl shrink-0 ${
-                        isActive ? 'bg-white/20' : `bg-white dark:bg-slate-800`
-                      }`}>
-                        <Icon size={18} className={isActive ? 'text-white' : `text-slate-700 dark:text-slate-200`} />
-                      </div>
-
-                      <div className="flex-1 min-w-0 relative z-10">
-                        <p className={`text-xs font-bold leading-tight ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-                          {panel.label}
-                        </p>
-                        <p className={`text-[10px] font-medium leading-tight ${isActive ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {panel.description}
-                        </p>
-                      </div>
-
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeIndicator"
-                          className="flex items-center gap-1.5 relative z-10"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                          <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">
-                            Active
-                          </span>
-                        </motion.div>
-                      )}
-
-                      {!isActive && (
-                        <div className={`w-2 h-2 rounded-full ${panel.dotColor} opacity-0 group-hover:opacity-100 transition-opacity`} />
-                      )}
-                    </button>
-                  );
-                })}
+            {/* Footer */}
+            <div className="px-3.5 py-2 bg-slate-50/80 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50">
+              <div className="flex items-center justify-center gap-1.5">
+                <Shield size={9} className="text-slate-400" />
+                <p className="text-[8px] text-slate-400 font-medium">Development Preview Build</p>
               </div>
-
-              {/* Footer */}
-              <div className="px-5 py-3 bg-slate-50/80 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50">
-                <div className="flex items-center justify-center gap-1.5">
-                  <Shield size={10} className="text-slate-400" />
-                  <p className="text-[9px] text-slate-400 font-medium">
-                    Development Preview Build
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          </>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Trigger FAB */}
-      <motion.button
-        onClick={() => setOpen(prev => !prev)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="flex items-center gap-3 pl-4 pr-5 py-3.5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-white shadow-2xl shadow-black/40 border border-white/10 cursor-pointer group relative overflow-hidden"
+      {/* Circular chat-head bubble (icon only, draggable) */}
+      <motion.div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onClick={handleBubbleClick}
+        whileTap={{ scale: 0.92 }}
+        animate={draggingRef.current ? { scale: 1.08 } : { scale: 1 }}
+        className="relative touch-none cursor-grab active:cursor-grabbing"
+        style={{ width: BUBBLE, height: BUBBLE }}
       >
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-
-        <div className="relative z-10 flex items-center gap-3">
-          {/* Active role indicator */}
-          <div className="relative">
-            <div className={`p-2 rounded-xl ${activePanel.activeBg} shadow-lg`}>
-              <activePanel.icon size={18} className="text-white" />
-            </div>
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${activePanel.dotColor} border-2 border-slate-900`}
-            />
-          </div>
-
-          {/* Label */}
-          <div className="text-left">
-            <p className="text-[11px] font-black uppercase tracking-wider leading-tight">
-              {activePanel.label}
-            </p>
-            <p className="text-[9px] text-slate-400 font-medium leading-tight">
-              {activePanel.sublabel}
-            </p>
-          </div>
-
-          {/* Chevron */}
-          <motion.div
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="relative z-10"
-          >
-            <ChevronDown size={16} className="text-slate-400" />
-          </motion.div>
+        <div className="w-full h-full rounded-full bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 shadow-2xl shadow-black/40 border border-white/10 flex items-center justify-center relative overflow-hidden">
+          <SVGLogo variant="icon" size={34} />
+          <motion.span
+            animate={{ scale: [1, 1.25, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className={`absolute top-1 right-1 w-3 h-3 rounded-full ${activePanel.dotColor} border-2 border-white`}
+          />
         </div>
-      </motion.button>
+      </motion.div>
     </div>
   );
 };

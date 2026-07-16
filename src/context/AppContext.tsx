@@ -5,6 +5,7 @@ import { coupons } from '../data/coupons';
 
 interface AppContextType {
   products: Product[];
+  categories: string[];
   orders: Order[];
   cart: CartItem[];
   activeTable: string;
@@ -26,7 +27,13 @@ interface AppContextType {
   updateProductPrice: (productId: string, newPrice: number) => void;
   updateProductImage: (productId: string, newImage: string) => void;
   addProduct: (newProduct: Omit<Product, 'id' | 'available'>) => void;
+  addCategory: (name: string) => boolean;
+  renameCategory: (oldName: string, newName: string) => boolean;
+  deleteCategory: (category: string) => void;
+  moveProductsToCategory: (productIds: string[], category: string) => void;
+  updateProduct: (productId: string, updates: { name: string; price: number; category: string; description: string; preparationTime: number; image: string }) => void;
   deleteProduct: (productId: string) => void;
+  deleteProducts: (productIds: string[]) => void;
   toggleFavorite: (productId: string) => void;
   loginStaff: (role: 'cashier' | 'kitchen') => boolean;
   logoutStaff: () => void;
@@ -191,6 +198,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  // Authoritative, ordered category list (persisted so custom categories survive
+  // even when empty, and deleted categories stay deleted after refresh).
+  const [categories, setCategories] = useState<string[]>(() => {
+    const deriveFromProducts = (list: Product[]): string[] => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      list.forEach(p => {
+        if (p.category && !seen.has(p.category)) {
+          seen.add(p.category);
+          out.push(p.category);
+        }
+      });
+      return out;
+    };
+
+    const stored = localStorage.getItem('gc_categories');
+    if (stored) {
+      try {
+        const saved: string[] = JSON.parse(stored);
+        if (Array.isArray(saved)) {
+          // Merge persisted order with any categories present in current products
+          const merged = [...saved.filter(c => typeof c === 'string')];
+          deriveFromProducts(initialProducts).forEach(c => {
+            if (!merged.includes(c)) merged.push(c);
+          });
+          return merged;
+        }
+      } catch (err) {
+        console.error('Failed to parse gc_categories from storage', err);
+      }
+    }
+    return deriveFromProducts(initialProducts);
+  });
+
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('gc_orders');
     const updateOrderImages = (parsedOrders: Order[]): Order[] => {
@@ -307,6 +348,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('gc_products', JSON.stringify(products));
   }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('gc_categories', JSON.stringify(categories));
+  }, [categories]);
 
   useEffect(() => {
     localStorage.setItem('gc_orders', JSON.stringify(orders));
@@ -609,6 +654,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       image: newProduct.image || ''
     };
     setProducts(prevProducts => [productWithId, ...prevProducts]);
+    // Ensure the product's category is registered in the category list
+    if (newProduct.category && !categories.includes(newProduct.category)) {
+      setCategories(prev => prev.includes(newProduct.category) ? prev : [...prev, newProduct.category]);
+    }
+  };
+
+  const addCategory = (name: string): boolean => {
+    const clean = name.trim().toLowerCase();
+    if (!clean) return false;
+    if (categories.includes(clean)) return false;
+    setCategories(prev => [...prev, clean]);
+    return true;
+  };
+
+  const renameCategory = (oldName: string, newName: string): boolean => {
+    const newClean = newName.trim().toLowerCase();
+    if (!newClean) return false;
+    if (oldName !== newClean && categories.includes(newClean)) return false;
+    // Update product references
+    setProducts(prevProducts => prevProducts.map(p =>
+      p.category === oldName ? { ...p, category: newClean } : p
+    ));
+    // Update category list preserving position
+    setCategories(prev => prev.map(c => (c === oldName ? newClean : c)));
+    return true;
+  };
+
+  const deleteCategory = (category: string) => {
+    // Remove every product in the category from the menu (and customer menu)
+    setProducts(prevProducts => prevProducts.filter(p => p.category !== category));
+    // Remove the category from the persisted list so it stays deleted
+    setCategories(prev => prev.filter(c => c !== category));
+  };
+
+  const moveProductsToCategory = (productIds: string[], category: string) => {
+    const idSet = new Set(productIds);
+    const target = category.trim().toLowerCase();
+    if (target && !categories.includes(target)) {
+      setCategories(prev => [...prev, target]);
+    }
+    setProducts(prevProducts => prevProducts.map(p =>
+      idSet.has(p.id) ? { ...p, category: target } : p
+    ));
   };
 
   const updateProductImage = (productId: string, newImage: string) => {
@@ -619,6 +707,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteProduct = (productId: string) => {
     setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+  };
+
+  const deleteProducts = (productIds: string[]) => {
+    const idSet = new Set(productIds);
+    setProducts(prevProducts => prevProducts.filter(p => !idSet.has(p.id)));
+  };
+
+  const updateProduct = (
+    productId: string,
+    updates: { name: string; price: number; category: string; description: string; preparationTime: number; image: string }
+  ) => {
+    setProducts(prevProducts => prevProducts.map(p =>
+      p.id === productId
+        ? {
+            ...p,
+            name: updates.name,
+            price: updates.price,
+            category: updates.category,
+            description: updates.description,
+            preparationTime: updates.preparationTime,
+            image: updates.image || ''
+          }
+        : p
+    ));
   };
 
   const toggleFavorite = (productId: string) => {
@@ -715,6 +827,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       products,
+      categories,
       orders,
       cart,
       activeTable,
@@ -736,7 +849,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateProductPrice,
       updateProductImage,
       addProduct,
+      addCategory,
+      renameCategory,
+      deleteCategory,
+      moveProductsToCategory,
+      updateProduct,
       deleteProduct,
+      deleteProducts,
       toggleFavorite,
       loginStaff,
       logoutStaff,
