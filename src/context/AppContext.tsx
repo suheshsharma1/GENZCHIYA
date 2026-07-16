@@ -141,28 +141,20 @@ const generateMockOrders = (productsList: Product[]): Order[] => {
   return mockOrders.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 };
 
-const resolveProductImageUrl = (imagePath: string): string => {
-  return imagePath || '';
-};
 
-const isLocalImagePath = (path: string): boolean => {
-  if (!path) return false;
-  return !(path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:'));
-};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('gc_products');
-    const CURRENT_MENU_VERSION = 'v5-nepal-cafe-prices-2026';
+    const CURRENT_MENU_VERSION = 'v6-external-images-2026';
     const savedVersion = localStorage.getItem('gc_menu_version');
 
     const loadProducts = (prods: Product[]): Product[] => {
       return prods.map(p => {
+        // Always refresh image from the source product data so external URLs stay current
         const match = initialProducts.find(ip => ip.id === p.id);
-        if (match) {
-          if (isLocalImagePath(p.image) || (!p.image && match.image)) {
-            return { ...p, image: match.image };
-          }
+        if (match && !p.image) {
+          return { ...p, image: match.image };
         }
         return p;
       });
@@ -206,10 +198,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...order,
         items: order.items.map(item => {
           const match = initialProducts.find(ip => ip.id === item.product.id);
-          if (match) {
-            if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
-              return { ...item, product: { ...item.product, image: match.image } };
-            }
+          if (match && !item.product.image) {
+            return { ...item, product: { ...item.product, image: match.image } };
           }
           return item;
         })
@@ -236,10 +226,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const parsed: CartItem[] = JSON.parse(saved);
         return parsed.map(item => {
           const match = initialProducts.find(ip => ip.id === item.product.id);
-          if (match) {
-            if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
-              return { ...item, product: { ...item.product, image: match.image } };
-            }
+          if (match && !item.product.image) {
+            return { ...item, product: { ...item.product, image: match.image } };
           }
           return item;
         });
@@ -302,10 +290,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...order,
           items: order.items.map(item => {
             const match = initialProducts.find(ip => ip.id === item.product.id);
-            if (match) {
-              if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
-                return { ...item, product: { ...item.product, image: match.image } };
-              }
+            if (match && !item.product.image) {
+              return { ...item, product: { ...item.product, image: match.image } };
             }
             return item;
           })
@@ -365,10 +351,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...order,
             items: order.items.map(item => {
               const match = initialProducts.find(ip => ip.id === item.product.id);
-              if (match) {
-                if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
-                  return { ...item, product: { ...item.product, image: match.image } };
-                }
+              if (match && !item.product.image) {
+                return { ...item, product: { ...item.product, image: match.image } };
               }
               return item;
             })
@@ -383,10 +367,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const parsed: Product[] = JSON.parse(e.newValue);
           const updated = parsed.map(p => {
             const match = initialProducts.find(ip => ip.id === p.id);
-            if (match) {
-              if (isLocalImagePath(p.image) || (!p.image && match.image)) {
-                return { ...p, image: match.image };
-              }
+            if (match && !p.image) {
+              return { ...p, image: match.image };
             }
             return p;
           });
@@ -403,10 +385,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...order,
               items: order.items.map(item => {
                 const match = initialProducts.find(ip => ip.id === item.product.id);
-                if (match) {
-                  if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
-                    return { ...item, product: { ...item.product, image: match.image } };
-                  }
+                if (match && !item.product.image) {
+                  return { ...item, product: { ...item.product, image: match.image } };
                 }
                 return item;
               })
@@ -626,14 +606,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...newProduct,
       id,
       available: true,
-      image: resolveProductImageUrl(newProduct.image)
+      image: newProduct.image || ''
     };
     setProducts(prevProducts => [productWithId, ...prevProducts]);
   };
 
   const updateProductImage = (productId: string, newImage: string) => {
     setProducts(prevProducts => prevProducts.map(p => 
-      p.id === productId ? { ...p, image: resolveProductImageUrl(newImage) } : p
+      p.id === productId ? { ...p, image: newImage || '' } : p
     ));
   };
 
