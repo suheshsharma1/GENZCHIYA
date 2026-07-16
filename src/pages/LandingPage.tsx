@@ -6,9 +6,8 @@ import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
 import QRCode from 'qrcode';
 
-/* ─── Animated QR Preview Card (shown on initial load) ────────────────────── */
 interface QRPreviewCardProps {
-  tableNumber: string | null;  // null = demo/generic
+  tableNumber: string | null;
 }
 const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ tableNumber }) => {
   const [qrDataUrl, setQrDataUrl] = useState('');

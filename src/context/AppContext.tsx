@@ -142,14 +142,12 @@ const generateMockOrders = (productsList: Product[]): Order[] => {
 };
 
 const resolveProductImageUrl = (imagePath: string): string => {
-  if (!imagePath) return '';
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
-    return imagePath;
-  }
-  const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-  const baseUrl = import.meta.env.BASE_URL || '/';
-  const formattedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${formattedBaseUrl}${cleanPath}`;
+  return imagePath || '';
+};
+
+const isLocalImagePath = (path: string): boolean => {
+  if (!path) return false;
+  return !(path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:'));
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -157,54 +155,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('gc_products');
     const CURRENT_MENU_VERSION = 'v5-nepal-cafe-prices-2026';
     const savedVersion = localStorage.getItem('gc_menu_version');
-    
-    const resolveImages = (prods: Product[]): Product[] => {
-      return prods.map(p => ({
-        ...p,
-        image: resolveProductImageUrl(p.image)
-      }));
+
+    const loadProducts = (prods: Product[]): Product[] => {
+      return prods.map(p => {
+        const match = initialProducts.find(ip => ip.id === p.id);
+        if (match) {
+          if (isLocalImagePath(p.image) || (!p.image && match.image)) {
+            return { ...p, image: match.image };
+          }
+        }
+        return p;
+      });
     };
-    
-    // Clear old data if menu version changed, but preserve cashier's custom products and images
+
     if (saved && savedVersion !== CURRENT_MENU_VERSION) {
       try {
         const oldProducts: Product[] = JSON.parse(saved);
         const customProducts = oldProducts.filter(p => p.id.startsWith('prod-'));
-        
-        const updatedInitialProducts = initialProducts.map(initProd => {
-          const oldProd = oldProducts.find(p => p.id === initProd.id);
-          // If the image was changed from the default, preserve the cashier's custom image
-          if (oldProd && oldProd.image !== initProd.image && !oldProd.image.includes(initProd.image.replace(/^\//, ''))) {
-            return { ...initProd, image: oldProd.image };
-          }
-          return initProd;
-        });
-
-        const mergedProducts = [...customProducts, ...updatedInitialProducts];
+        const mergedProducts = [...customProducts, ...initialProducts];
 
         localStorage.removeItem('gc_products');
         localStorage.removeItem('gc_orders');
         localStorage.removeItem('gc_cart');
         localStorage.removeItem('gc_favorites');
         localStorage.setItem('gc_menu_version', CURRENT_MENU_VERSION);
-        return resolveImages(mergedProducts);
+        return loadProducts(mergedProducts);
       } catch (err) {
         console.error('Failed to merge old products on version upgrade', err);
         localStorage.setItem('gc_menu_version', CURRENT_MENU_VERSION);
-        return resolveImages(initialProducts);
+        return initialProducts;
       }
     }
-    
+
     if (!saved) {
       localStorage.setItem('gc_menu_version', CURRENT_MENU_VERSION);
     }
-    
-    return saved ? resolveImages(JSON.parse(saved)) : resolveImages(initialProducts);
+
+    try {
+      const parsed = saved ? JSON.parse(saved) : initialProducts;
+      return loadProducts(parsed);
+    } catch (e) {
+      return initialProducts;
+    }
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('gc_orders');
-    if (saved) return JSON.parse(saved);
+    const updateOrderImages = (parsedOrders: Order[]): Order[] => {
+      return parsedOrders.map(order => ({
+        ...order,
+        items: order.items.map(item => {
+          const match = initialProducts.find(ip => ip.id === item.product.id);
+          if (match) {
+            if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
+              return { ...item, product: { ...item.product, image: match.image } };
+            }
+          }
+          return item;
+        })
+      }));
+    };
+
+    if (saved) {
+      try {
+        return updateOrderImages(JSON.parse(saved));
+      } catch (err) {
+        console.error('Failed to parse gc_orders from storage', err);
+      }
+    }
     // Otherwise generate clean mock orders
     const mocks = generateMockOrders(initialProducts);
     localStorage.setItem('gc_orders', JSON.stringify(mocks));
@@ -213,7 +231,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('gc_cart');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      try {
+        const parsed: CartItem[] = JSON.parse(saved);
+        return parsed.map(item => {
+          const match = initialProducts.find(ip => ip.id === item.product.id);
+          if (match) {
+            if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
+              return { ...item, product: { ...item.product, image: match.image } };
+            }
+          }
+          return item;
+        });
+      } catch (err) {
+        console.error('Failed to parse gc_cart from storage', err);
+      }
+    }
+    return [];
   });
 
   const [activeTable, setActiveTable] = useState<string>(() => {
@@ -261,7 +295,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [currentTrackingOrder, setCurrentTrackingOrder] = useState<Order | null>(() => {
     const saved = localStorage.getItem('gc_tracking_order');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      try {
+        const order: Order = JSON.parse(saved);
+        return {
+          ...order,
+          items: order.items.map(item => {
+            const match = initialProducts.find(ip => ip.id === item.product.id);
+            if (match) {
+              if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
+                return { ...item, product: { ...item.product, image: match.image } };
+              }
+            }
+            return item;
+          })
+        };
+      } catch (err) {
+        console.error('Failed to parse gc_tracking_order from storage', err);
+      }
+    }
+    return null;
   });
 
   // Sync to local storage
@@ -307,23 +360,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'gc_orders' && e.newValue) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          setOrders(parsed);
+          const parsed: Order[] = JSON.parse(e.newValue);
+          const updated = parsed.map(order => ({
+            ...order,
+            items: order.items.map(item => {
+              const match = initialProducts.find(ip => ip.id === item.product.id);
+              if (match) {
+                if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
+                  return { ...item, product: { ...item.product, image: match.image } };
+                }
+              }
+              return item;
+            })
+          }));
+          setOrders(updated);
         } catch (err) {
           console.error('Failed to parse gc_orders from storage', err);
         }
       }
       if (e.key === 'gc_products' && e.newValue) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          setProducts(parsed);
+          const parsed: Product[] = JSON.parse(e.newValue);
+          const updated = parsed.map(p => {
+            const match = initialProducts.find(ip => ip.id === p.id);
+            if (match) {
+              if (isLocalImagePath(p.image) || (!p.image && match.image)) {
+                return { ...p, image: match.image };
+              }
+            }
+            return p;
+          });
+          setProducts(updated);
         } catch (err) {
           console.error('Failed to parse gc_products from storage', err);
         }
       }
       if (e.key === 'gc_tracking_order') {
         try {
-          setCurrentTrackingOrder(e.newValue ? JSON.parse(e.newValue) : null);
+          if (e.newValue) {
+            const order: Order = JSON.parse(e.newValue);
+            const updatedOrder = {
+              ...order,
+              items: order.items.map(item => {
+                const match = initialProducts.find(ip => ip.id === item.product.id);
+                if (match) {
+                  if (isLocalImagePath(item.product.image) || (!item.product.image && match.image)) {
+                    return { ...item, product: { ...item.product, image: match.image } };
+                  }
+                }
+                return item;
+              })
+            };
+            setCurrentTrackingOrder(updatedOrder);
+          } else {
+            setCurrentTrackingOrder(null);
+          }
         } catch (err) {
           console.error('Failed to parse gc_tracking_order from storage', err);
         }
