@@ -93,7 +93,7 @@ export const products: Product[] = [
     description: "Classic milk tea brewed with premium black tea leaves and fresh whole milk. A comforting and creamy beverage perfect for any time of day.",
     price: 30,
     category: "tea",
-    image: "/images/products/tea-01.jpg",
+    image: "/images/products/Milk Tea.jpg",
     available: true,
     featured: true,
     customizations: teaCustomizations,
@@ -105,7 +105,7 @@ export const products: Product[] = [
     description: "Strong and robust black tea served hot. Pure and simple, perfect for tea lovers who appreciate the authentic taste.",
     price: 25,
     category: "tea",
-    image: "/images/products/tea-02.jpg",
+    image: "/images/products/Black Tea.jpg",
     available: true,
     customizations: teaCustomizations,
     preparationTime: 3
@@ -116,7 +116,7 @@ export const products: Product[] = [
     description: "Premium green tea leaves offering a delicate vegetal flavor and clean finish. Rich in antioxidants and perfect for health-conscious customers.",
     price: 50,
     category: "tea",
-    image: "/images/products/tea-03.jpg",
+    image: "/images/products/Green Tea.jpg",
     available: true,
     customizations: teaCustomizations,
     preparationTime: 4
@@ -127,7 +127,7 @@ export const products: Product[] = [
     description: "Refreshing black tea infused with fresh lemon juice and a hint of honey. A zesty and revitalizing drink.",
     price: 40,
     category: "tea",
-    image: "/images/products/tea-04.jpg",
+    image: "/images/products/Lemon Tea.jpg",
     available: true,
     customizations: teaCustomizations,
     preparationTime: 4
@@ -138,7 +138,7 @@ export const products: Product[] = [
     description: "Zesty freshly-grated ginger steeped in hot water with a touch of honey. Excellent for soothing the throat and boosting immunity.",
     price: 40,
     category: "tea",
-    image: "/images/products/tea-05.jpg",
+    image: "/images/products/Ginger Tea.jpg",
     available: true,
     customizations: teaCustomizations,
     preparationTime: 5
@@ -149,7 +149,7 @@ export const products: Product[] = [
     description: "Rich black tea infused with premium crushed cardamom, cloves, cinnamon, black pepper, and fresh ginger, boiled to perfection with milk.",
     price: 50,
     category: "tea",
-    image: "/images/products/tea-06.jpg",
+    image: "/images/products/Masala Tea.jpg",
     available: true,
     featured: true,
     customizations: teaCustomizations,
@@ -161,7 +161,7 @@ export const products: Product[] = [
     description: "Fresh lemon juice combined with organic wild honey and hot water. A soothing and healthy beverage perfect for cold weather.",
     price: 80,
     category: "tea",
-    image: "/images/products/tea-07.jpg",
+    image: "/images/products/Honey Lemon Tea.jpg",
     available: true,
     customizations: teaCustomizations,
     preparationTime: 3
@@ -174,7 +174,7 @@ export const products: Product[] = [
     description: "Pure black coffee made from premium roasted beans. Strong, bold, and perfect for coffee purists.",
     price: 80,
     category: "coffee",
-    image: "/images/products/coffee-01.jpg",
+    image: "/images/products/Black Coffee.jpg",
     available: true,
     customizations: coffeeCustomizations,
     preparationTime: 3
@@ -185,7 +185,7 @@ export const products: Product[] = [
     description: "Smooth coffee balanced with steamed milk. A classic comforting beverage with the perfect coffee-to-milk ratio.",
     price: 120,
     category: "coffee",
-    image: "/images/products/coffee-02.jpg",
+    image: "/images/products/Milk Coffee.jpg",
     available: true,
     customizations: coffeeCustomizations,
     preparationTime: 4
@@ -196,7 +196,7 @@ export const products: Product[] = [
     description: "Espresso combined with equal parts steamed milk and rich thick milk foam, finished with a dust of cocoa powder.",
     price: 180,
     category: "coffee",
-    image: "/images/products/coffee-03.jpg",
+    image: "/images/products/Cappuccin.jpg",
     available: true,
     customizations: coffeeCustomizations,
     preparationTime: 5
@@ -207,7 +207,7 @@ export const products: Product[] = [
     description: "A double shot of espresso balanced with steamed milk and covered with a velvety light layer of micro-foam.",
     price: 190,
     category: "coffee",
-    image: "/images/products/coffee-04.jpg",
+    image: "/images/products/Latt.jpg",
     available: true,
     featured: true,
     customizations: coffeeCustomizations,
@@ -219,7 +219,7 @@ export const products: Product[] = [
     description: "Espresso shots combined with house dark chocolate sauce and steamed milk, capped with whipped cream and cocoa shavings.",
     price: 220,
     category: "coffee",
-    image: "/images/products/coffee-03.jpg",
+    image: "/images/products/Cappuccin.jpg",
     available: true,
     customizations: coffeeCustomizations,
     preparationTime: 6
@@ -230,7 +230,7 @@ export const products: Product[] = [
     description: "Chilled coffee poured over ice with a splash of milk. A refreshing cold coffee beverage perfect for hot days.",
     price: 180,
     category: "coffee",
-    image: "/images/products/coffee-06.jpg",
+    image: "/images/products/Cold Coffee.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 4
@@ -243,7 +243,7 @@ export const products: Product[] = [
     description: "Refreshing black tea brewed and served over ice with a slice of lemon. A perfect cooling beverage.",
     price: 90,
     category: "cold-drinks",
-    image: "/images/products/tea-02.jpg",
+    image: "/images/products/Lemon Tea.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 3
@@ -254,7 +254,7 @@ export const products: Product[] = [
     description: "Fresh lemon juice mixed with sparkling soda and ice. A zesty, carbonated refresher.",
     price: 90,
     category: "cold-drinks",
-    image: "/images/products/cold-02.jpg",
+    image: "/images/products/Lemon Soda.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 2
@@ -265,7 +265,7 @@ export const products: Product[] = [
     description: "Freshly squeezed lime juice with soda water and ice. Simple, refreshing, and perfectly balanced.",
     price: 80,
     category: "cold-drinks",
-    image: "/images/products/cold-03.jpg",
+    image: "/images/products/Fresh Lime.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 2
@@ -276,7 +276,7 @@ export const products: Product[] = [
     description: "Fresh mango juice made from ripe Alphonso mangoes. Sweet, tropical, and naturally refreshing.",
     price: 120,
     category: "cold-drinks",
-    image: "/images/products/cold-04.jpg",
+    image: "/images/products/Mango Juice.jpg",
     available: true,
     featured: true,
     customizations: coldDrinkCustomizations,
@@ -288,7 +288,7 @@ export const products: Product[] = [
     description: "Freshly squeezed orange juice packed with Vitamin C. A healthy and delicious morning choice.",
     price: 90,
     category: "cold-drinks",
-    image: "/images/products/cold-05.jpg",
+    image: "/images/products/Orange Juice.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 3
@@ -299,7 +299,7 @@ export const products: Product[] = [
     description: "Premium mineral water, chilled and served. Pure hydration.",
     price: 30,
     category: "cold-drinks",
-    image: "/images/products/cold-06.jpg",
+    image: "/images/products/Mineral Water.jpg",
     available: true,
     preparationTime: 1
   }

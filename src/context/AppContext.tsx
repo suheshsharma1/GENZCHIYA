@@ -154,14 +154,14 @@ const generateMockOrders = (productsList: Product[]): Order[] => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('gc_products');
-    const CURRENT_MENU_VERSION = 'v9-limited-categories-2026';
+    const CURRENT_MENU_VERSION = 'v10-renamed-images-2026';
     const savedVersion = localStorage.getItem('gc_menu_version');
 
     const loadProducts = (prods: Product[]): Product[] => {
       return prods.map(p => {
-        // Always refresh image from the source product data so external URLs stay current
+        // Always refresh image from the source product data so external/relative paths stay current
         const match = initialProducts.find(ip => ip.id === p.id);
-        if (match && !p.image) {
+        if (match) {
           return { ...p, image: match.image };
         }
         return p;
