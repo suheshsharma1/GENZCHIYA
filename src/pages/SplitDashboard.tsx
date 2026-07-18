@@ -10,7 +10,7 @@ import {
   TrendingDown, Plus, LogOut, RefreshCw, BarChart2, Coffee, 
   Layers, FileText, CheckCircle2, AlertCircle, Trash, Search, Upload, Edit2,
   Bell, LayoutGrid, List, ChefHat, Timer, BellRing, QrCode, Download, Minus,
-  Folder, FolderOpen, ChevronDown, ChevronRight
+  Folder, FolderOpen, ChevronDown, ChevronRight, Ticket, Tag
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useApp } from '../context/AppContext';
@@ -132,7 +132,8 @@ export const SplitDashboard: React.FC = () => {
     orders, products, categories, updateOrderStatus, toggleProductAvailability, 
     updateProduct, updateProductImage, deleteProduct, deleteProducts, 
     addCategory, renameCategory, deleteCategory, moveProductsToCategory,
-    getSalesReport, resetAllData, logoutStaff 
+    getSalesReport, resetAllData, logoutStaff,
+    couponsList, addCoupon, deleteCoupon
   } = useApp();
 
   // Layout Preference State (Split Screen vs Cashier Focus vs Kitchen Focus)
@@ -145,7 +146,14 @@ export const SplitDashboard: React.FC = () => {
   });
 
   // Cashier Active Tab State
-  const [cashierTab, setCashierTab] = useState<'orders' | 'menu' | 'reports' | 'qr'>('orders');
+  const [cashierTab, setCashierTab] = useState<'orders' | 'menu' | 'reports' | 'qr' | 'promos'>('orders');
+
+  // Promo code creator state
+  const [promoCode, setPromoCode] = useState('');
+  const [promoType, setPromoType] = useState<'percentage' | 'fixed'>('percentage');
+  const [promoValue, setPromoValue] = useState(10);
+  const [promoMinOrder, setPromoMinOrder] = useState(200);
+  const [promoDesc, setPromoDesc] = useState('');
 
   // Kitchen filter state
   const [kitchenFilter, setKitchenFilter] = useState<'all' | 'preparing' | 'ready'>('all');
@@ -473,6 +481,27 @@ export const SplitDashboard: React.FC = () => {
     showSuccess(`"${name}" deleted successfully.`);
   };
 
+  const handleCreatePromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCode) return;
+    const success = addCoupon({
+      code: promoCode.trim().toUpperCase(),
+      discountType: promoType,
+      value: Number(promoValue),
+      minOrder: Number(promoMinOrder),
+      description: promoDesc.trim() || ''
+    });
+    if (success) {
+      showSuccess(`Promo code "${promoCode.trim().toUpperCase()}" created successfully!`);
+      setPromoCode('');
+      setPromoDesc('');
+      setPromoValue(10);
+      setPromoMinOrder(200);
+    } else {
+      alert("Failed to create promo code. Code might already exist.");
+    }
+  };
+
   // Bulk delete helpers
   const toggleProductSelection = (id: string) => {
     setSelectedProductIds(prev =>
@@ -686,7 +715,8 @@ export const SplitDashboard: React.FC = () => {
                   { key: 'orders', label: 'Live Queue' },
                   { key: 'menu', label: 'Menu Editor' },
                   { key: 'reports', label: 'Sales Reports' },
-                  { key: 'qr', label: 'Generate QR' }
+                  { key: 'qr', label: 'Generate QR' },
+                  { key: 'promos', label: 'Promo Codes' }
                 ].map(tab => (
                   <button
                     key={tab.key}
@@ -1093,6 +1123,177 @@ export const SplitDashboard: React.FC = () => {
                   {Array.from({ length: tableCount }, (_, i) => String(i + 1)).map(t => (
                     <TableQRCard key={t} tableNumber={t} baseUrl={qrBaseUrl} />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 5: Promo Codes Manager */}
+            {cashierTab === 'promos' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                  {/* ── Create Promo Code Form ── */}
+                  <div className="md:col-span-1 bg-white dark:bg-brand-dark-card p-5 rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 text-left h-fit">
+                    <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                      <Plus size={14} />
+                      <span>Create Promo Code</span>
+                    </h3>
+                    <form onSubmit={handleCreatePromo} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Promo Code *</label>
+                        <input
+                          type="text"
+                          required
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. MONSOON15"
+                          className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-emerald dark:focus:border-brand-amber font-mono uppercase tracking-wider transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Discount Type *</label>
+                        <select
+                          value={promoType}
+                          onChange={(e) => setPromoType(e.target.value as 'percentage' | 'fixed')}
+                          className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-emerald dark:focus:border-brand-amber transition-colors"
+                        >
+                          <option value="percentage">Percentage (%)</option>
+                          <option value="fixed">Fixed Amount (Rs.)</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            {promoType === 'percentage' ? 'Value (%)' : 'Value (Rs.)'} *
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            max={promoType === 'percentage' ? 100 : 10000}
+                            value={promoValue}
+                            onChange={(e) => setPromoValue(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-emerald dark:focus:border-brand-amber transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Min Order (Rs.) *</label>
+                          <input
+                            type="number"
+                            required
+                            min={0}
+                            value={promoMinOrder}
+                            onChange={(e) => setPromoMinOrder(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-emerald dark:focus:border-brand-amber transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Description (Optional)</label>
+                        <textarea
+                          value={promoDesc}
+                          onChange={(e) => setPromoDesc(e.target.value)}
+                          placeholder="e.g. Special monsoon discount for all customers!"
+                          rows={2}
+                          className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg rounded-xl text-xs outline-none focus:border-brand-emerald dark:focus:border-brand-amber resize-none transition-colors"
+                        />
+                      </div>
+
+                      {/* Preview pill */}
+                      {promoCode && (
+                        <div className="bg-brand-emerald/5 dark:bg-brand-amber/5 border border-brand-emerald/20 dark:border-brand-amber/20 rounded-xl p-3 text-[10px] space-y-0.5">
+                          <p className="font-black text-brand-emerald dark:text-brand-amber font-mono tracking-wider">{promoCode}</p>
+                          <p className="text-slate-500 dark:text-slate-400">
+                            {promoType === 'percentage' ? `${promoValue}% off` : `Rs. ${promoValue} off`} · Min Rs. {promoMinOrder}
+                          </p>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="w-full bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Ticket size={14} />
+                        <span>Add Promo Code</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* ── Active Promo Codes List ── */}
+                  <div className="md:col-span-2 space-y-4 text-left">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
+                        <Ticket size={14} />
+                        <span>Active Promo Codes</span>
+                        <span className="bg-brand-emerald/10 dark:bg-brand-amber/10 text-brand-emerald dark:text-brand-amber text-[9px] font-black px-2 py-0.5 rounded-full">
+                          {couponsList.length}
+                        </span>
+                      </h3>
+                    </div>
+
+                    {couponsList.length === 0 ? (
+                      <div className="bg-slate-50 dark:bg-brand-dark-bg/20 border border-dashed border-slate-200 dark:border-brand-dark-border/30 rounded-2xl p-14 text-center flex flex-col items-center justify-center gap-3">
+                        <div className="p-4 bg-slate-100 dark:bg-brand-dark-border/20 rounded-2xl">
+                          <Ticket size={28} className="text-slate-300 dark:text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 dark:text-slate-500">No promo codes yet</p>
+                          <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5">Create a code using the form to offer discounts to customers.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[440px] overflow-y-auto pr-1">
+                        {couponsList.map(coupon => (
+                          <div
+                            key={coupon.code}
+                            className="bg-white dark:bg-brand-dark-card p-4 rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 flex flex-col justify-between shadow-sm hover:border-brand-emerald/30 dark:hover:border-brand-amber/30 hover:shadow-md transition-all group"
+                          >
+                            <div className="space-y-2.5">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="bg-brand-emerald/8 dark:bg-brand-amber/8 border border-brand-emerald/20 dark:border-brand-amber/20 px-2.5 py-1 rounded-lg text-brand-emerald dark:text-brand-amber font-mono font-black text-xs tracking-widest">
+                                  {coupon.code}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Delete promo code "${coupon.code}"?`)) deleteCoupon(coupon.code);
+                                  }}
+                                  className="text-slate-300 hover:text-red-500 dark:text-slate-700 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer opacity-0 group-hover:opacity-100 shrink-0"
+                                  title="Delete Promo Code"
+                                >
+                                  <Trash size={13} />
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                  coupon.discountType === 'percentage'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+                                }`}>
+                                  {coupon.discountType === 'percentage' ? `${coupon.value}% OFF` : `Rs. ${coupon.value} OFF`}
+                                </span>
+                              </div>
+
+                              {coupon.description && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed line-clamp-2">
+                                  {coupon.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20 flex justify-between items-center">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Min Order</span>
+                              <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">Rs. {coupon.minOrder}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             )}

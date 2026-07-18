@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, ArrowRight, Sparkles, Coffee, Clock, ShieldCheck } from 'lucide-react';
+import { QrCode, ArrowRight, Sparkles, Coffee, Clock, ShieldCheck, Ticket, Tag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
 import QRCode from 'qrcode';
@@ -113,7 +113,7 @@ const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ tableNumber }) => {
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setTable, activeTable } = useApp();
+  const { setTable, activeTable, couponsList } = useApp();
 
   const [tableInput, setTableInput] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -377,6 +377,68 @@ export const LandingPage: React.FC = () => {
                 <span>Contactless</span>
               </div>
             </div>
+
+            {/* ── Promo Codes Banner ── */}
+            {couponsList.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="w-full"
+              >
+                {/* Label */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Tag size={11} className="text-brand-amber" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-brand-amber">Today's Offers</span>
+                </div>
+
+                {/* Scrollable promo cards */}
+                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+                  {couponsList.map((c) => (
+                    <div
+                      key={c.code}
+                      className="snap-start shrink-0 bg-gradient-to-br from-brand-emerald/8 to-brand-amber/8 dark:from-brand-emerald/15 dark:to-brand-amber/15 border border-brand-emerald/20 dark:border-brand-amber/20 rounded-2xl px-4 py-3 min-w-[170px] relative overflow-hidden"
+                    >
+                      {/* decorative dashes on left */}
+                      <div className="absolute left-0 inset-y-0 w-1.5 bg-gradient-to-b from-brand-emerald to-brand-amber rounded-l-2xl" />
+
+                      <div className="pl-2 space-y-1.5">
+                        {/* Discount badge */}
+                        <div className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          c.discountType === 'percentage'
+                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                        }`}>
+                          <Ticket size={9} />
+                          {c.discountType === 'percentage' ? `${c.value}% OFF` : `Rs. ${c.value} OFF`}
+                        </div>
+
+                        {/* Code */}
+                        <p className="font-mono font-black text-brand-emerald dark:text-brand-amber tracking-widest text-xs leading-none">
+                          {c.code}
+                        </p>
+
+                        {/* Min order */}
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500">
+                          Min order Rs. {c.minOrder}
+                        </p>
+
+                        {/* Description */}
+                        {c.description && (
+                          <p className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
+                            {c.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-2">
+                  💡 Apply these codes in your cart during checkout
+                </p>
+              </motion.div>
+            )}
           </div>
         </div>
       </main>

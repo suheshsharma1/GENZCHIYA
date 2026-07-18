@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, 
+  Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket,
   ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -17,7 +17,7 @@ export const MenuPage: React.FC = () => {
   const navigate = useNavigate();
   
   const { 
-    products, cart, activeTable, activeCoupon, favorites, 
+    products, cart, activeTable, activeCoupon, couponsList, favorites, 
     addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, 
     placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme 
   } = useApp();
@@ -270,6 +270,44 @@ export const MenuPage: React.FC = () => {
             );
           })}
         </div>
+
+        {/* ── Today's Offers Strip ── */}
+        {couponsList.length > 0 && (
+          <div className="-mx-4 px-4 mb-2">
+            <div className="bg-gradient-to-r from-brand-emerald/5 via-brand-amber/5 to-brand-emerald/5 dark:from-brand-emerald/10 dark:via-brand-amber/10 dark:to-brand-emerald/10 border border-brand-amber/15 dark:border-brand-amber/20 rounded-2xl px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Ticket size={12} className="text-brand-amber shrink-0" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-brand-amber">Today's Offers — Apply in Cart</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                {couponsList.map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => {
+                      // Copy code to clipboard + open cart
+                      navigator.clipboard?.writeText(c.code).catch(() => {});
+                      setShowCart(true);
+                    }}
+                    title={`Tap to copy ${c.code} and open cart`}
+                    className="shrink-0 flex items-center gap-2 bg-white dark:bg-brand-dark-card border border-brand-emerald/20 dark:border-brand-amber/20 rounded-xl px-3 py-2 hover:border-brand-emerald dark:hover:border-brand-amber transition-all cursor-pointer group"
+                  >
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                      c.discountType === 'percentage'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {c.discountType === 'percentage' ? `${c.value}% OFF` : `Rs.${c.value} OFF`}
+                    </span>
+                    <span className="font-mono font-black text-[10px] text-brand-emerald dark:text-brand-amber tracking-widest">
+                      {c.code}
+                    </span>
+                    <span className="text-[8px] text-slate-400 hidden group-hover:inline">tap to copy</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 2. Products Grid */}
         <div className="mt-6">
@@ -680,24 +718,48 @@ export const MenuPage: React.FC = () => {
                   <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
                     {/* Coupon Form */}
                     {!activeCoupon ? (
-                      <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                          <input
-                            type="text"
-                            placeholder="Enter Coupon Code"
-                            value={couponInput}
-                            onChange={(e) => setCouponInput(e.target.value)}
-                            className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
-                        >
-                          Apply
-                        </button>
-                      </form>
+                      <>
+                        {/* Available codes hint */}
+                        {couponsList.length > 0 && (
+                          <div className="space-y-1.5">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                              <Ticket size={9} />
+                              Available Codes
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {couponsList.map((c) => (
+                                <button
+                                  key={c.code}
+                                  type="button"
+                                  onClick={() => setCouponInput(c.code)}
+                                  title={c.description || ''}
+                                  className="font-mono text-[9px] font-black tracking-widest text-brand-emerald dark:text-brand-amber bg-brand-emerald/8 dark:bg-brand-amber/10 border border-brand-emerald/20 dark:border-brand-amber/20 px-2 py-1 rounded-lg hover:bg-brand-emerald/15 dark:hover:bg-brand-amber/20 transition-colors cursor-pointer"
+                                >
+                                  {c.code} &mdash; {c.discountType === 'percentage' ? `${c.value}%` : `Rs.${c.value}`} off
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Enter Coupon Code"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value)}
+                              className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
+                          >
+                            Apply
+                          </button>
+                        </form>
+                      </>
                     ) : (
                       <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
                         <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">

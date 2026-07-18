@@ -10,6 +10,7 @@ interface AppContextType {
   cart: CartItem[];
   activeTable: string;
   activeCoupon: Coupon | null;
+  couponsList: Coupon[];
   favorites: string[];
   userRole: 'customer' | 'cashier' | 'kitchen' | null;
   setUserRole: (role: 'customer' | 'cashier' | 'kitchen' | null) => void;
@@ -21,6 +22,8 @@ interface AppContextType {
   clearCart: () => void;
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
+  addCoupon: (newCoupon: Coupon) => boolean;
+  deleteCoupon: (code: string) => void;
   placeOrder: (customerName: string, paymentMethod: PaymentMethod, customerPhone?: string, notes?: string) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus, extra?: { rejectionReason?: string; estTime?: number; isPriority?: boolean }) => void;
   toggleProductAvailability: (productId: string) => void;
@@ -290,6 +293,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [couponsList, setCouponsList] = useState<Coupon[]>(() => {
+    const saved = localStorage.getItem('gc_coupons');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (err) {
+        console.error('Failed to parse gc_coupons from storage', err);
+      }
+    }
+    return coupons;
+  });
+
   const [favorites, setFavorites] = useState<string[]>(() => {
     const saved = localStorage.getItem('gc_favorites');
     return saved ? JSON.parse(saved) : [];
@@ -379,6 +394,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('gc_active_coupon', JSON.stringify(activeCoupon));
   }, [activeCoupon]);
+
+  useEffect(() => {
+    localStorage.setItem('gc_coupons', JSON.stringify(couponsList));
+  }, [couponsList]);
 
   useEffect(() => {
     localStorage.setItem('gc_favorites', JSON.stringify(favorites));
@@ -523,7 +542,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const applyCoupon = (code: string) => {
     const cleanCode = code.trim().toUpperCase();
-    const coupon = coupons.find(c => c.code === cleanCode);
+    const coupon = couponsList.find(c => c.code === cleanCode);
     if (!coupon) {
       return { success: false, message: 'Invalid coupon code.' };
     }
@@ -548,6 +567,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeCoupon = () => {
     setActiveCoupon(null);
+  };
+
+  const addCoupon = (newCoupon: Coupon): boolean => {
+    const cleanCode = newCoupon.code.trim().toUpperCase();
+    if (!cleanCode) return false;
+    if (couponsList.some(c => c.code === cleanCode)) {
+      return false;
+    }
+    const formatted: Coupon = {
+      ...newCoupon,
+      code: cleanCode,
+      description: newCoupon.description || `${newCoupon.discountType === 'percentage' ? `${newCoupon.value}%` : `Rs. ${newCoupon.value}`} OFF on orders above Rs. ${newCoupon.minOrder}!`
+    };
+    setCouponsList(prev => [...prev, formatted]);
+    return true;
+  };
+
+  const deleteCoupon = (code: string) => {
+    const cleanCode = code.trim().toUpperCase();
+    setCouponsList(prev => prev.filter(c => c.code !== cleanCode));
+    if (activeCoupon && activeCoupon.code === cleanCode) {
+      setActiveCoupon(null);
+    }
   };
 
   const calculateDiscount = (subtotal: number, coupon: Coupon | null): number => {
@@ -816,10 +858,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('gc_orders');
     localStorage.removeItem('gc_cart');
     localStorage.removeItem('gc_active_coupon');
+    localStorage.removeItem('gc_coupons');
     localStorage.removeItem('gc_favorites');
     localStorage.removeItem('gc_tracking_order');
     setProducts(initialProducts);
     setCategories(Array.from(new Set(initialProducts.map(p => p.category))));
+    setCouponsList(coupons);
     const mocks = generateMockOrders(initialProducts);
     setOrders(mocks);
     setCart([]);
@@ -836,6 +880,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cart,
       activeTable,
       activeCoupon,
+      couponsList,
       favorites,
       userRole,
       setUserRole,
@@ -847,6 +892,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearCart,
       applyCoupon,
       removeCoupon,
+      addCoupon,
+      deleteCoupon,
       placeOrder,
       updateOrderStatus,
       toggleProductAvailability,
