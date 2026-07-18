@@ -154,7 +154,7 @@ const generateMockOrders = (productsList: Product[]): Order[] => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('gc_products');
-    const CURRENT_MENU_VERSION = 'v7-empty-seed-2026';
+    const CURRENT_MENU_VERSION = 'v9-limited-categories-2026';
     const savedVersion = localStorage.getItem('gc_menu_version');
 
     const loadProducts = (prods: Product[]): Product[] => {
@@ -175,6 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const mergedProducts = [...customProducts, ...initialProducts];
 
         localStorage.removeItem('gc_products');
+        localStorage.removeItem('gc_categories');
         localStorage.removeItem('gc_orders');
         localStorage.removeItem('gc_cart');
         localStorage.removeItem('gc_favorites');
@@ -811,12 +812,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetAllData = () => {
     localStorage.removeItem('gc_products');
+    localStorage.removeItem('gc_categories');
     localStorage.removeItem('gc_orders');
     localStorage.removeItem('gc_cart');
     localStorage.removeItem('gc_active_coupon');
     localStorage.removeItem('gc_favorites');
     localStorage.removeItem('gc_tracking_order');
     setProducts(initialProducts);
+    setCategories(Array.from(new Set(initialProducts.map(p => p.category))));
     const mocks = generateMockOrders(initialProducts);
     setOrders(mocks);
     setCart([]);

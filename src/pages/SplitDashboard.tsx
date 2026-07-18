@@ -184,11 +184,13 @@ export const SplitDashboard: React.FC = () => {
   const [editProdDesc, setEditProdDesc] = useState('');
   const [editProdPrep, setEditProdPrep] = useState(5);
   const [editProductImage, setEditProductImage] = useState('');
+  const [editProdBlobPreview, setEditProdBlobPreview] = useState('');
 
   // Edit image form state
   const [editingProductId, setEditingProductId] = useState('');
   const [editingProductName, setEditingProductName] = useState('');
   const [editImageURL, setEditImageURL] = useState('');
+  const [editImageBlobPreview, setEditImageBlobPreview] = useState('');
 
   // Delete confirmation state
   const [deletingProductId, setDeletingProductId] = useState('');
@@ -414,6 +416,7 @@ export const SplitDashboard: React.FC = () => {
     setEditProdDesc(product.description);
     setEditProdPrep(product.preparationTime);
     setEditProductImage(product.image);
+    setEditProdBlobPreview('');
     setShowEditProductModal(true);
   };
 
@@ -436,19 +439,11 @@ export const SplitDashboard: React.FC = () => {
     setEditingProductId(product.id);
     setEditingProductName(product.name);
     setEditImageURL(product.image);
+    setEditImageBlobPreview('');
     setShowEditImageModal(true);
   };
 
-  const handleEditFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditImageURL(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Image fields use relative paths (e.g. /images/products/item.jpg) — no FileReader/Base64
 
   const handleEditImageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1381,10 +1376,10 @@ export const SplitDashboard: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
-                  <select value={editProdCat} onChange={(e) => setEditProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none">
-                    <option value="tea">Tea</option>
-                    <option value="coffee">Coffee</option>
-                    <option value="cold-drinks">Cold Drinks</option>
+                  <select value={editProdCat} onChange={(e) => setEditProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none capitalize">
+                    {categories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -1392,37 +1387,49 @@ export const SplitDashboard: React.FC = () => {
                   <input type="text" value={editProdDesc} onChange={(e) => setEditProdDesc(e.target.value)} placeholder="Description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Image</label>
-                  <label htmlFor="split-edit-prod-image" className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-200 dark:border-brand-dark-border rounded-xl cursor-pointer hover:border-brand-emerald dark:hover:border-brand-amber transition-colors overflow-hidden relative bg-slate-50 dark:bg-brand-dark-bg group">
-                    {editProductImage ? (
-                      <>
-                        <img src={editProductImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white text-[10px] font-bold">Click to change</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center gap-1.5 pointer-events-none">
-                        <Upload size={16} className="text-slate-300 dark:text-slate-600" />
-                        <span className="text-[10px] text-slate-400 font-semibold">Click to upload photo</span>
-                        <span className="text-[9px] text-slate-300 dark:text-slate-600">JPG, PNG, WEBP supported</span>
-                      </div>
-                    )}
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Image Path</label>
+                  <div className="flex gap-2">
                     <input
-                      id="split-edit-prod-image"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => setEditProductImage(reader.result as string);
-                          reader.readAsDataURL(file);
-                        }
-                      }}
+                      id="split-edit-prod-image-path"
+                      type="text"
+                      value={editProductImage}
+                      onChange={(e) => { setEditProductImage(e.target.value); setEditProdBlobPreview(''); }}
+                      placeholder="/images/products/my-item.jpg"
+                      className="flex-1 px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none font-mono"
                     />
-                  </label>
+                    <label
+                      htmlFor="split-edit-prod-file-pick"
+                      className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      <Upload size={12} /> Browse
+                      <input
+                        id="split-edit-prod-file-pick"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setEditProductImage(`/images/products/${file.name}`);
+                            setEditProdBlobPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {(editProdBlobPreview || editProductImage) && (
+                    <div className="mt-1 w-full h-24 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
+                      <img
+                        src={editProdBlobPreview || editProductImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-[9px] text-slate-400">
+                    📂 Browse গरेपछि image <code className="font-mono bg-slate-100 dark:bg-brand-dark-bg px-1 rounded">public/images/products/</code> मा copy गर्नुस् — path automatically fill हुन्छ।
+                  </p>
                 </div>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
                   <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Save Changes</button>
@@ -1441,23 +1448,56 @@ export const SplitDashboard: React.FC = () => {
               <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Change Product Image</h4>
               <p className="text-xs text-slate-400 mb-3">Product: <span className="font-bold text-slate-800 dark:text-white">{editingProductName}</span></p>
               <form onSubmit={handleEditImageSubmit} className="space-y-3">
-                <label htmlFor="split-edit-image-upload" className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 dark:border-brand-dark-border rounded-xl cursor-pointer hover:border-brand-emerald dark:hover:border-brand-amber transition-colors overflow-hidden relative bg-slate-50 dark:bg-brand-dark-bg group">
-                  {editImageURL ? (
-                    <>
-                      <img src={editImageURL} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">Click to change</span>
-                      </div>
-                    </>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Image Path</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="split-edit-image-path"
+                      type="text"
+                      value={editImageURL}
+                      onChange={(e) => { setEditImageURL(e.target.value); setEditImageBlobPreview(''); }}
+                      placeholder="/images/products/my-item.jpg"
+                      className="flex-1 px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none font-mono"
+                    />
+                    <label
+                      htmlFor="split-edit-image-file-pick"
+                      className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      <Upload size={12} /> Browse
+                      <input
+                        id="split-edit-image-file-pick"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setEditImageURL(`/images/products/${file.name}`);
+                            setEditImageBlobPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {(editImageBlobPreview || editImageURL) ? (
+                    <div className="w-full h-36 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
+                      <img
+                        src={editImageBlobPreview || editImageURL}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-1.5 pointer-events-none">
+                    <div className="w-full h-36 rounded-xl border-2 border-dashed border-slate-200 dark:border-brand-dark-border flex flex-col items-center justify-center gap-1.5 bg-slate-50 dark:bg-brand-dark-bg">
                       <Upload size={18} className="text-slate-300 dark:text-slate-600" />
-                      <span className="text-xs text-slate-400 font-semibold">Click to upload photo</span>
-                      <span className="text-[10px] text-slate-300 dark:text-slate-600">JPG, PNG, WEBP supported</span>
+                      <span className="text-xs text-slate-400 font-semibold">Browse गरेर image छान्नुस्</span>
                     </div>
                   )}
-                  <input id="split-edit-image-upload" type="file" accept="image/*" className="hidden" onChange={handleEditFileUpload} />
-                </label>
+                  <p className="text-[9px] text-slate-400">
+                    📂 Browse गरेपछि image <code className="font-mono bg-slate-100 dark:bg-brand-dark-bg px-1 rounded">public/images/products/</code> मा copy गर्नुस् — path automatically fill हुन्छ।
+                  </p>
+                </div>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
                   <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Update Image</button>
                   <button type="button" onClick={() => setShowEditImageModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>

@@ -85,113 +85,225 @@ const coldDrinkCustomizations = [
   }
 ];
 
-const burgerCustomizations = [
+export const products: Product[] = [
+  // CATEGORY: TEA
   {
-    name: "Preparation Notes",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Regular (Medium Spicy)", price: 0 },
-      { name: "Mild / No Spice", price: 0 },
-      { name: "Extra Spicy", price: 0 }
-    ]
+    id: "tea-01",
+    name: "Milk Tea",
+    description: "Classic milk tea brewed with premium black tea leaves and fresh whole milk. A comforting and creamy beverage perfect for any time of day.",
+    price: 30,
+    category: "tea",
+    image: "/images/products/tea-01.jpg",
+    available: true,
+    featured: true,
+    customizations: teaCustomizations,
+    preparationTime: 5
   },
   {
-    name: "Burger Upgrades",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Extra Cheddar Cheese Slice", price: 20 },
-      { name: "Double Patty (Extra Meat)", price: 60 },
-      { name: "Add Crispy Bacon (Chicken)", price: 40 },
-      { name: "Add Fried Egg", price: 20 }
-    ]
-  }
-];
-
-const pizzaCustomizations = [
-  {
-    name: "Crust Type",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Classic Thin Crust", price: 0 },
-      { name: "Hand-Tossed Pan Crust", price: 20 },
-      { name: "Cheese Burst Crust", price: 50 }
-    ]
+    id: "tea-02",
+    name: "Black Tea",
+    description: "Strong and robust black tea served hot. Pure and simple, perfect for tea lovers who appreciate the authentic taste.",
+    price: 25,
+    category: "tea",
+    image: "/images/products/tea-02.jpg",
+    available: true,
+    customizations: teaCustomizations,
+    preparationTime: 3
   },
   {
-    name: "Extra Toppings",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Extra Mozzarella Cheese", price: 30 },
-      { name: "Black Olives & Jalapenos", price: 20 },
-      { name: "Smoked Chicken Shreds", price: 40 },
-      { name: "Fresh Mushrooms", price: 20 }
-    ]
-  }
-];
-
-const momoCustomizations = [
-  {
-    name: "Preparation Style",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Classic Steamed", price: 0 },
-      { name: "Crispy Kothey (Half Fried)", price: 30 },
-      { name: "Traditional Jhol (Spicy Soup)", price: 40 },
-      { name: "Hot Chilli (C-Momo Sauce)", price: 50 }
-    ]
+    id: "tea-03",
+    name: "Green Tea",
+    description: "Premium green tea leaves offering a delicate vegetal flavor and clean finish. Rich in antioxidants and perfect for health-conscious customers.",
+    price: 50,
+    category: "tea",
+    image: "/images/products/tea-03.jpg",
+    available: true,
+    customizations: teaCustomizations,
+    preparationTime: 4
   },
   {
-    name: "Extra Chutney",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Fiery Tomato Chutney", price: 15 },
-      { name: "Yellow Sesame Jhol Soup", price: 25 }
-    ]
-  }
-];
-
-const pastaCustomizations = [
-  {
-    name: "Cheese & Spice Options",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Extra Parmesan Cheese", price: 25 },
-      { name: "Extra Garlic Bread (2 pcs)", price: 20 },
-      { name: "Make it Extra Spicy", price: 0 }
-    ]
-  }
-];
-
-const bakeryCustomizations = [
-  {
-    name: "Serving Method",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Serve Heated (Warm)", price: 0 },
-      { name: "Serve Normal (Cold)", price: 0 }
-    ]
+    id: "tea-04",
+    name: "Lemon Tea",
+    description: "Refreshing black tea infused with fresh lemon juice and a hint of honey. A zesty and revitalizing drink.",
+    price: 40,
+    category: "tea",
+    image: "/images/products/tea-04.jpg",
+    available: true,
+    customizations: teaCustomizations,
+    preparationTime: 4
   },
   {
-    name: "Toppings",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Scoop of Vanilla Ice Cream", price: 30 },
-      { name: "Extra Chocolate Drizzle", price: 10 }
-    ]
+    id: "tea-05",
+    name: "Ginger Tea",
+    description: "Zesty freshly-grated ginger steeped in hot water with a touch of honey. Excellent for soothing the throat and boosting immunity.",
+    price: 40,
+    category: "tea",
+    image: "/images/products/tea-05.jpg",
+    available: true,
+    customizations: teaCustomizations,
+    preparationTime: 5
+  },
+  {
+    id: "tea-06",
+    name: "Masala Tea",
+    description: "Rich black tea infused with premium crushed cardamom, cloves, cinnamon, black pepper, and fresh ginger, boiled to perfection with milk.",
+    price: 50,
+    category: "tea",
+    image: "/images/products/tea-06.jpg",
+    available: true,
+    featured: true,
+    customizations: teaCustomizations,
+    preparationTime: 6
+  },
+  {
+    id: "tea-07",
+    name: "Honey Lemon Tea",
+    description: "Fresh lemon juice combined with organic wild honey and hot water. A soothing and healthy beverage perfect for cold weather.",
+    price: 80,
+    category: "tea",
+    image: "/images/products/tea-07.jpg",
+    available: true,
+    customizations: teaCustomizations,
+    preparationTime: 3
+  },
+
+  // CATEGORY: COFFEE
+  {
+    id: "coffee-01",
+    name: "Black Coffee",
+    description: "Pure black coffee made from premium roasted beans. Strong, bold, and perfect for coffee purists.",
+    price: 80,
+    category: "coffee",
+    image: "/images/products/coffee-01.jpg",
+    available: true,
+    customizations: coffeeCustomizations,
+    preparationTime: 3
+  },
+  {
+    id: "coffee-02",
+    name: "Milk Coffee",
+    description: "Smooth coffee balanced with steamed milk. A classic comforting beverage with the perfect coffee-to-milk ratio.",
+    price: 120,
+    category: "coffee",
+    image: "/images/products/coffee-02.jpg",
+    available: true,
+    customizations: coffeeCustomizations,
+    preparationTime: 4
+  },
+  {
+    id: "coffee-03",
+    name: "Cappuccino",
+    description: "Espresso combined with equal parts steamed milk and rich thick milk foam, finished with a dust of cocoa powder.",
+    price: 180,
+    category: "coffee",
+    image: "/images/products/coffee-03.jpg",
+    available: true,
+    customizations: coffeeCustomizations,
+    preparationTime: 5
+  },
+  {
+    id: "coffee-04",
+    name: "Latte",
+    description: "A double shot of espresso balanced with steamed milk and covered with a velvety light layer of micro-foam.",
+    price: 190,
+    category: "coffee",
+    image: "/images/products/coffee-04.jpg",
+    available: true,
+    featured: true,
+    customizations: coffeeCustomizations,
+    preparationTime: 5
+  },
+  {
+    id: "coffee-05",
+    name: "Mocha",
+    description: "Espresso shots combined with house dark chocolate sauce and steamed milk, capped with whipped cream and cocoa shavings.",
+    price: 220,
+    category: "coffee",
+    image: "/images/products/coffee-03.jpg",
+    available: true,
+    customizations: coffeeCustomizations,
+    preparationTime: 6
+  },
+  {
+    id: "coffee-06",
+    name: "Cold Coffee",
+    description: "Chilled coffee poured over ice with a splash of milk. A refreshing cold coffee beverage perfect for hot days.",
+    price: 180,
+    category: "coffee",
+    image: "/images/products/coffee-06.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 4
+  },
+
+  // CATEGORY: COLD DRINKS
+  {
+    id: "cold-01",
+    name: "Iced Tea",
+    description: "Refreshing black tea brewed and served over ice with a slice of lemon. A perfect cooling beverage.",
+    price: 90,
+    category: "cold-drinks",
+    image: "/images/products/tea-02.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 3
+  },
+  {
+    id: "cold-02",
+    name: "Lemon Soda",
+    description: "Fresh lemon juice mixed with sparkling soda and ice. A zesty, carbonated refresher.",
+    price: 90,
+    category: "cold-drinks",
+    image: "/images/products/cold-02.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 2
+  },
+  {
+    id: "cold-03",
+    name: "Fresh Lime",
+    description: "Freshly squeezed lime juice with soda water and ice. Simple, refreshing, and perfectly balanced.",
+    price: 80,
+    category: "cold-drinks",
+    image: "/images/products/cold-03.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 2
+  },
+  {
+    id: "cold-04",
+    name: "Mango Juice",
+    description: "Fresh mango juice made from ripe Alphonso mangoes. Sweet, tropical, and naturally refreshing.",
+    price: 120,
+    category: "cold-drinks",
+    image: "/images/products/cold-04.jpg",
+    available: true,
+    featured: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 3
+  },
+  {
+    id: "cold-05",
+    name: "Orange Juice",
+    description: "Freshly squeezed orange juice packed with Vitamin C. A healthy and delicious morning choice.",
+    price: 90,
+    category: "cold-drinks",
+    image: "/images/products/cold-05.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 3
+  },
+  {
+    id: "cold-06",
+    name: "Mineral Water",
+    description: "Premium mineral water, chilled and served. Pure hydration.",
+    price: 30,
+    category: "cold-drinks",
+    image: "/images/products/cold-06.jpg",
+    available: true,
+    preparationTime: 1
   }
 ];
-
-export const products: Product[] = [];
-
 
 export const CATEGORY_MAP: Record<string, string> = {
   "all": "All Items",
