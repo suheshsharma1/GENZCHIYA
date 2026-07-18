@@ -284,9 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   });
 
-  const [activeTable, setActiveTable] = useState<string>(() => {
-    return localStorage.getItem('gc_active_table') || '';
-  });
+  const [activeTable, setActiveTable] = useState<string>('');
 
   const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(() => {
     const saved = localStorage.getItem('gc_active_coupon');
@@ -386,10 +384,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('gc_cart', JSON.stringify(cart));
   }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem('gc_active_table', activeTable);
-  }, [activeTable]);
 
   useEffect(() => {
     localStorage.setItem('gc_active_coupon', JSON.stringify(activeCoupon));
