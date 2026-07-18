@@ -54,6 +54,7 @@ const generateCartItemId = (productId: string, customizations: SelectedCustomiza
 
 // Generates 20 high-quality historical mock orders for rich graphs
 const generateMockOrders = (productsList: Product[]): Order[] => {
+  if (!productsList || productsList.length === 0) return [];
   const mockOrders: Order[] = [];
   const paymentMethods: PaymentMethod[] = ['khalti', 'esewa', 'cash'];
   const customerNames = ['Aarav Sharma', 'Sita Thapa', 'Rahul Karki', 'Pooja Shrestha', 'Amit Giri', 'Neha Joshi', 'Kshitiz Adhikari', 'Samikshya Bhatta', 'Niranjan Sen', 'Prerna Dahal'];
