@@ -153,7 +153,7 @@ const generateMockOrders = (productsList: Product[]): Order[] => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('gc_products');
-    const CURRENT_MENU_VERSION = 'v6-external-images-2026';
+    const CURRENT_MENU_VERSION = 'v7-empty-seed-2026';
     const savedVersion = localStorage.getItem('gc_menu_version');
 
     const loadProducts = (prods: Product[]): Product[] => {

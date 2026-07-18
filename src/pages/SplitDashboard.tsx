@@ -849,66 +849,6 @@ export const SplitDashboard: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Bulk product delete action bar */}
-                <div className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 border transition-all ${selectedProductIds.length > 0 ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40' : 'bg-slate-50 dark:bg-brand-dark-bg/50 border-slate-200/60 dark:border-brand-dark-border/30'}`}>
-                  <span className={`text-[11px] font-bold ${selectedProductIds.length > 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {selectedProductIds.length > 0
-                      ? `${selectedProductIds.length} product${selectedProductIds.length > 1 ? 's' : ''} selected`
-                      : 'No products selected'}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowMoveCategoryModal(true)}
-                      disabled={selectedProductIds.length === 0}
-                      className="bg-brand-amber hover:bg-brand-gold disabled:opacity-40 disabled:cursor-not-allowed text-brand-dark-bg font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Folder size={11} />
-                      <span>Move</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedProductIds([])}
-                      disabled={selectedProductIds.length === 0}
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={handleBulkDelete}
-                      disabled={selectedProductIds.length === 0}
-                      className="bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[11px] py-1.5 px-3.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash size={11} />
-                      <span>Delete Selected</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bulk category delete action bar */}
-                <div className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 border transition-all ${selectedCategoryIds.length > 0 ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40' : 'bg-slate-50 dark:bg-brand-dark-bg/50 border-slate-200/60 dark:border-brand-dark-border/30'}`}>
-                  <span className={`text-[11px] font-bold ${selectedCategoryIds.length > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {selectedCategoryIds.length > 0
-                      ? `${selectedCategoryIds.length} categor${selectedCategoryIds.length > 1 ? 'ies' : 'y'} selected`
-                      : 'No categories selected'}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedCategoryIds([])}
-                      disabled={selectedCategoryIds.length === 0}
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={() => setShowBulkCategoryDeleteModal(true)}
-                      disabled={selectedCategoryIds.length === 0}
-                      className="bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[11px] py-1.5 px-3.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash size={11} />
-                      <span>Delete Selected Categories</span>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Category folders */}
                 <div className="space-y-3">
                   {categories.map(cat => {

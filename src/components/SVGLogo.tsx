@@ -1,16 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface SVGLogoProps {
   className?: string;
   variant?: 'full' | 'icon' | 'dark' | 'light';
   size?: number;
+  onClick?: () => void;
 }
 
 export const SVGLogo: React.FC<SVGLogoProps> = ({ 
   className = '', 
   variant = 'full', 
-  size = 40 
+  size = 40,
+  onClick
 }) => {
+  const navigate = useNavigate();
   const isIcon = variant === 'icon';
   const isDark = variant === 'dark';
   
@@ -18,6 +22,14 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
   const teaColor = '#6D4C41';
   const oliveGreen = '#5E7043';
   const whiteContrast = '#FAF7F2';
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
+    window.location.href = '/';
+  };
 
   const logoSvg = (
     <svg
@@ -158,7 +170,13 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
   );
 
   return (
-    <div className={`inline-flex items-center ${className}`}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
+      className={`inline-flex items-center cursor-pointer select-none ${className}`}
+    >
       {logoSvg}
     </div>
   );
