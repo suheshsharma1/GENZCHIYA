@@ -1,8 +1,27 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Heart, Clock, ChevronRight, UserCheck, Star, Award, AwardIcon } from 'lucide-react';
+import { ArrowLeft, UserCircle, Heart, Clock, ChevronDown, UserCheck, IdCard, ReceiptText, Crown, PackageSearch } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
+
+const TEA_CATEGORIES = ['tea'];
+const SNACK_CATEGORIES = ['cold-drinks'];
+
+const STATUS_STYLES: Record<string, string> = {
+  completed: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400',
+  served: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400',
+  rejected: 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400',
+  pending: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-brand-amber',
+  accepted: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-brand-amber',
+  preparing: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-brand-amber',
+  ready: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-brand-amber animate-pulse',
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  khalti: 'Khalti',
+  esewa: 'eSewa',
+  cash: 'Cash',
+};
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +29,7 @@ export const HistoryPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'profile'>('history');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'tea' | 'snacks'>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Local state for profile editor
   const [profileName, setProfileName] = useState(() => localStorage.getItem('gc_profile_name') || 'Guest Companion');
@@ -26,15 +46,15 @@ export const HistoryPage: React.FC = () => {
     setTimeout(() => setEditSuccess(false), 3000);
   };
 
-  // Filter orders related to this session or mock orders
-  const allCustomerOrders = orders.filter(
-    o => o.customerName === profileName || o.customerPhone === profilePhone || o.customerPhone === '9841555666'
-  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Order History for the current table session (newest first).
+  // When a table is active we scope to that session; otherwise we show all
+  // completed customer orders so the history is never empty for the demo.
+  const allCustomerOrders = orders
+    .filter(o => (activeTable ? o.tableNumber === activeTable : true))
+    .filter(o => ['completed', 'served', 'pending', 'accepted', 'preparing', 'ready', 'rejected'].includes(o.status))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  // Apply category filter to history
-  const TEA_CATEGORIES = ['tea'];
-  const SNACK_CATEGORIES = ['snacks-fries', 'momo'];
-
+  // Apply Tea / Snacks category filter to history
   const customerOrders = allCustomerOrders.filter(order => {
     if (historyFilter === 'all') return true;
     if (historyFilter === 'tea') return order.items.some(item => TEA_CATEGORIES.includes(item.product.category));
@@ -65,13 +85,13 @@ export const HistoryPage: React.FC = () => {
         {/* Profile Card Header */}
         <div className="bg-white dark:bg-brand-dark-card rounded-2xl p-5 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-brand-emerald/10 dark:bg-brand-amber/15 text-brand-emerald dark:text-brand-amber flex items-center justify-center">
-            <User size={28} />
+            <UserCircle size={30} />
           </div>
           <div className="text-left space-y-1">
             <h4 className="font-bold text-base text-slate-800 dark:text-white flex items-center gap-1.5">
               <span>{profileName}</span>
               <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-brand-amber/20 text-[9px] font-bold text-brand-amber border border-brand-amber/10">
-                <Award size={10} />
+                <Crown size={10} />
                 Gold Tier
               </span>
             </h4>
@@ -83,32 +103,35 @@ export const HistoryPage: React.FC = () => {
         <div className="flex bg-white dark:bg-brand-dark-card rounded-xl p-1 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40">
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'history'
                 ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
                 : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
-            Order History ({customerOrders.length})
+            <ReceiptText size={13} />
+            History ({customerOrders.length})
           </button>
           <button
             onClick={() => setActiveTab('favorites')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'favorites'
                 ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
                 : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
+            <Heart size={13} />
             Favorites ({favoriteProducts.length})
           </button>
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'profile'
                 ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
                 : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
+            <IdCard size={13} />
             My Details
           </button>
         </div>
@@ -139,47 +162,142 @@ export const HistoryPage: React.FC = () => {
 
             {customerOrders.length === 0 ? (
               <div className="text-center py-12 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/60">
-                <Clock className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={32} />
+                <PackageSearch className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={32} />
                 <p className="text-slate-400 text-xs font-medium">No order history recorded yet.</p>
               </div>
             ) : (
               customerOrders.map((order) => {
-                const isOngoing = ['pending', 'accepted', 'preparing', 'ready'].includes(order.status);
-                
+                const isExpanded = expandedId === order.id;
+                const itemCustomTotal = (item: typeof order.items[number]) =>
+                  (item.product.price + item.selectedCustomizations.reduce(
+                    (cSum, cust) => cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
+                  )) * item.quantity;
+
                 return (
                   <div
                     key={order.id}
-                    onClick={() => navigate(`/tracking/${order.id}`)}
-                    className="p-4 bg-white dark:bg-brand-dark-card rounded-2xl shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 flex justify-between items-center hover:shadow-md cursor-pointer transition-shadow"
+                    className="bg-white dark:bg-brand-dark-card rounded-2xl shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 overflow-hidden"
                   >
-                    <div className="text-left space-y-1.5 flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 font-mono">Invoice: {order.id}</span>
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                          order.status === 'completed' || order.status === 'served'
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400'
-                            : order.status === 'rejected'
-                              ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
-                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-brand-amber animate-pulse'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-xs font-bold leading-tight">
-                        {order.items.map(item => `${item.product.name} (x${item.quantity})`).join(', ')}
-                      </div>
+                    {/* Collapsed row (click to expand) */}
+                    <div
+                      onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                      className="p-4 flex justify-between items-center hover:shadow-md cursor-pointer transition-shadow"
+                    >
+                      <div className="text-left space-y-1.5 flex-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">Invoice: {order.id}</span>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_STYLES[order.status] || STATUS_STYLES.pending}`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs font-bold leading-tight line-clamp-1">
+                          {order.items.map(item => `${item.product.name} (x${item.quantity})`).join(', ')}
+                        </div>
 
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(order.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span className="text-xs font-extrabold text-brand-emerald dark:text-brand-amber">
-                          Rs. {order.total}
-                        </span>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(order.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="text-xs font-extrabold text-brand-emerald dark:text-brand-amber">
+                            Rs. {order.total}
+                          </span>
+                        </div>
                       </div>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 ml-4 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      />
                     </div>
-                    <ChevronRight size={16} className="text-slate-400 ml-4 shrink-0" />
+
+                    {/* Expanded details */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-1 border-t border-slate-100 dark:border-brand-dark-border/40 space-y-3">
+                        {/* Meta grid */}
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Order ID</span>
+                            <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{order.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Table</span>
+                            <span className="font-bold text-slate-600 dark:text-slate-300">#{order.tableNumber}</span>
+                          </div>
+                          <div className="flex justify-between col-span-2">
+                            <span className="text-slate-400">Date & Time</span>
+                            <span className="font-bold text-slate-600 dark:text-slate-300">
+                              {new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} · {new Date(order.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Payment</span>
+                            <span className="font-bold text-slate-600 dark:text-slate-300">{PAYMENT_LABELS[order.payment.method] || order.payment.method}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Pay Status</span>
+                            <span className={`font-bold uppercase ${order.payment.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' : order.payment.status === 'failed' ? 'text-rose-500' : 'text-amber-600 dark:text-brand-amber'}`}>
+                              {order.payment.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Items */}
+                        <div className="space-y-1.5">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="bg-slate-50 dark:bg-brand-dark-bg/40 rounded-xl p-2.5 space-y-1">
+                              <div className="flex justify-between items-start gap-2">
+                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+                                  {item.product.name} <span className="text-brand-emerald dark:text-brand-amber">×{item.quantity}</span>
+                                </span>
+                                <span className="text-[11px] font-extrabold text-brand-emerald dark:text-brand-amber whitespace-nowrap">
+                                  Rs. {itemCustomTotal(item).toLocaleString()}
+                                </span>
+                              </div>
+                              {item.selectedCustomizations.length > 0 && (
+                                <div className="text-[9px] text-slate-400 italic">
+                                  {item.selectedCustomizations.map((cust, cIdx) => (
+                                    <div key={cIdx}>• {cust.name}: {cust.selections.map(s => `${s.name} (+Rs.${s.price})`).join(', ')}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {item.notes && (
+                                <div className="text-[9px] text-brand-amber font-semibold">Note: {item.notes}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Price breakdown */}
+                        <div className="space-y-1 text-[11px] border-t border-slate-100 dark:border-brand-dark-border/40 pt-2">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Subtotal</span>
+                            <span>Rs. {order.subtotal.toLocaleString()}</span>
+                          </div>
+                          {order.discount > 0 && (
+                            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                              <span>Discount</span>
+                              <span>-Rs. {order.discount.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {order.tax > 0 && (
+                            <div className="flex justify-between text-slate-400">
+                              <span>Tax (VAT)</span>
+                              <span>Rs. {order.tax.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {order.serviceCharge > 0 && (
+                            <div className="flex justify-between text-slate-400">
+                              <span>Service Charge</span>
+                              <span>Rs. {order.serviceCharge.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-extrabold border-t border-slate-200 dark:border-brand-dark-border/40 pt-1.5 text-brand-emerald dark:text-brand-amber">
+                            <span>Grand Total</span>
+                            <span>Rs. {order.total.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

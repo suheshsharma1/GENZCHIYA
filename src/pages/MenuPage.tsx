@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket,
+  Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket, Check,
   ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -47,7 +47,35 @@ export const MenuPage: React.FC = () => {
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'khalti' | 'esewa' | 'cash'>('khalti');
   const [checkoutNotes, setCheckoutNotes] = useState('');
-  
+
+  // Add-to-cart success toast (non-intrusive, auto-dismiss)
+  const [toast, setToast] = useState<{ name: string; quantity: number; count: number } | null>(null);
+  const toastTimer = useRef<number | null>(null);
+  const showAddToast = (name: string, quantity: number, count: number) => {
+    setToast({ name, quantity, count });
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  };
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  // Mini-cart panel open state (expanded on hover/click of floating button)
+  const [miniCartOpen, setMiniCartOpen] = useState(false);
+
+  // Close mini-cart on outside click
+  useEffect(() => {
+    if (!miniCartOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const el = document.getElementById('gc-minicart-wrap');
+      if (el && !el.contains(e.target as Node)) setMiniCartOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [miniCartOpen]);
+
   // Payment states
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [pendingOrderDetails, setPendingOrderDetails] = useState<any>(null);
@@ -136,10 +164,15 @@ export const MenuPage: React.FC = () => {
   const handleAddToCart = () => {
     if (!selectedProduct) return;
     addToCart(selectedProduct, customizationQuantity, customizationSelections, customizationNotes);
+    const addedName = selectedProduct.name;
+    const addedQty = customizationQuantity;
     setSelectedProduct(null);
-    
-    // Quick micro-interaction feedback (toast, open cart drawer)
-    setShowCart(true);
+
+    // Keep the customer on the Menu page — just show a success toast
+    // so they can continue browsing and adding more items without being
+    // forced into the cart or a payment prompt.
+    const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0) + addedQty;
+    showAddToast(addedName, addedQty, totalCount);
   };
 
   // Calculate pricing breakdown
@@ -238,7 +271,7 @@ export const MenuPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search premium teas, burgers, momos..."
+            placeholder="Search teas, coffee, cold drinks..."
             className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-white dark:bg-brand-dark-card border border-brand-sage/10 dark:border-brand-dark-border focus:border-brand-sage dark:focus:border-brand-amber focus:ring-2 focus:ring-brand-sage/10 dark:focus:ring-brand-amber/10 outline-none transition-all text-sm font-medium shadow-sm"
           />
           {searchQuery && (
@@ -411,29 +444,128 @@ export const MenuPage: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. Floating Cart Button */}
-      {cart.length > 0 && (
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-6 right-6 z-40"
+      {/* 3. Floating Cart (button expands a slide-out mini-cart on hover/click) */}
+      <div
+        id="gc-minicart-wrap"
+        className="fixed bottom-6 right-4 sm:right-6 z-40"
+        onMouseEnter={() => setMiniCartOpen(true)}
+        onMouseLeave={() => setMiniCartOpen(false)}
+      >
+        {/* Slide-out mini-cart panel */}
+        <AnimatePresence>
+          {miniCartOpen && cart.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, x: 24, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 24, scale: 0.96 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="absolute bottom-0 right-full mr-3 sm:mr-0 sm:right-16 sm:left-auto left-0 w-[78vw] max-w-[18rem] sm:w-64 max-h-[60vh] sm:max-h-[70vh] bg-white dark:bg-brand-dark-card rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col origin-bottom-right"
+            >
+              {/* Header */}
+              <div className="px-4 py-3 flex items-center gap-2 border-b border-slate-100 dark:border-brand-dark-border/50">
+                <div className="p-1.5 rounded-lg bg-brand-emerald/10 dark:bg-brand-amber/15">
+                  <ShoppingBag size={15} className="text-brand-emerald dark:text-brand-amber" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-100 leading-tight">Your Cart</p>
+                  <p className="text-[9px] text-slate-400 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items added</p>
+                </div>
+              </div>
+
+              {/* Scrollable product list (latest up to 5) */}
+              <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5 scrollbar-thin">
+                {cart.slice(-5).map((item) => {
+                  const unit = item.product.price + item.selectedCustomizations.reduce(
+                    (cSum, cust) => cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
+                  );
+                  const lineTotal = unit * item.quantity;
+                  return (
+                    <div key={item.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
+                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                          {item.product.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {item.quantity > 1
+                            ? `${item.quantity} × Rs. ${unit.toLocaleString()}`
+                            : `Rs. ${unit.toLocaleString()}`}
+                          <span className="font-semibold text-brand-emerald dark:text-brand-amber">
+                            {'  ·  Rs. '}{lineTotal.toLocaleString()}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {cart.length > 5 && (
+                  <p className="text-[9px] text-center text-slate-400 font-medium pt-1">
+                    +{cart.length - 5} more items in your cart
+                  </p>
+                )}
+              </div>
+
+              {/* Footer: totals + View Cart */}
+              <div className="px-4 py-3 border-t border-slate-100 dark:border-brand-dark-border/50 bg-slate-50/70 dark:bg-brand-dark-bg/50">
+                <div className="flex justify-between items-center mb-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Grand Total</span>
+                  <span className="text-sm font-extrabold text-brand-emerald dark:text-brand-amber">
+                    Rs. {cartGrandTotal.toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
+                  className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                >
+                  View Cart
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Floating cart button */}
+        <motion.button
+          initial={{ x: 50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
+          className="relative bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold px-5 py-4 rounded-2xl shadow-xl shadow-brand-emerald/25 dark:shadow-brand-amber/25 flex items-center gap-3 cursor-pointer group"
         >
-          <button
-            onClick={() => setShowCart(true)}
-            className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold px-5 py-4 rounded-2xl shadow-xl shadow-brand-emerald/25 dark:shadow-brand-amber/25 flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="relative">
-              <ShoppingBag size={20} />
+          <div className="relative">
+            <ShoppingBag size={20} />
+            {cart.length > 0 && (
               <span className="absolute -top-2.5 -right-2.5 bg-rose-500 text-white font-bold text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand-emerald dark:border-brand-amber">
                 {cart.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
+            )}
+          </div>
+          <span className="text-xs uppercase tracking-wider font-bold border-l border-white/20 dark:border-brand-dark-bg/20 pl-3">
+            {cart.length > 0 ? `Rs. ${cartGrandTotal.toLocaleString()}` : 'View Cart'}
+          </span>
+        </motion.button>
+      </div>
+
+      {/* Add-to-cart success toast (non-intrusive, auto-dismiss) */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
+          >
+            <div className="bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg font-bold text-xs px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2">
+              <Check size={14} className="shrink-0" />
+              <span>
+                <span className="font-extrabold">{toast.name}</span>
+                {toast.quantity > 1 && <span> ×{toast.quantity}</span>} added to cart
+              </span>
             </div>
-            <span className="text-xs uppercase tracking-wider font-bold border-l border-white/20 dark:border-brand-dark-bg/20 pl-3">
-              Rs. {cartGrandTotal.toLocaleString()}
-            </span>
-          </button>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 4. Customization Modal */}
       <AnimatePresence>
@@ -648,15 +780,21 @@ export const MenuPage: React.FC = () => {
                       const basePlusCustoms = item.product.price + itemCustomCost;
 
                       return (
-                        <div 
+                        <div
                           key={item.id}
-                          className="p-4 rounded-xl border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50/50 dark:bg-brand-dark-bg/25 space-y-2 flex flex-col justify-between"
+                          className="p-4 rounded-xl border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50/50 dark:bg-brand-dark-bg/25 space-y-2 flex gap-3 items-start"
                         >
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <h5 className="font-bold text-xs leading-snug">{item.product.name}</h5>
-                              
-                              {/* Customizations display */}
+                          {/* Product image */}
+                          <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
+                            <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-bold text-xs leading-snug">{item.product.name}</h5>
+
+                                {/* Customizations display */}
                               {item.selectedCustomizations.length > 0 && (
                                 <div className="text-[10px] text-slate-400 mt-1 italic font-normal">
                                   {item.selectedCustomizations.map((cust, cIdx) => (
@@ -674,7 +812,7 @@ export const MenuPage: React.FC = () => {
                               )}
                             </div>
 
-                            <span className="font-extrabold text-xs text-brand-emerald dark:text-brand-amber">
+                            <span className="font-extrabold text-xs text-brand-emerald dark:text-brand-amber whitespace-nowrap">
                               Rs. {(basePlusCustoms * item.quantity).toLocaleString()}
                             </span>
                           </div>
@@ -706,6 +844,7 @@ export const MenuPage: React.FC = () => {
                                 <Plus size={11} className="stroke-[3]" />
                               </button>
                             </div>
+                          </div>
                           </div>
                         </div>
                       );

@@ -156,6 +156,9 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300 flex flex-col overflow-x-hidden">
+      {/* Soft decorative background glows */}
+      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-brand-emerald/10 dark:bg-brand-emerald/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-brand-amber/10 dark:bg-brand-amber/5 blur-3xl" />
       {/* Header */}
       <header className="px-6 py-4 flex justify-between items-center z-10">
         <SVGLogo size={42} />

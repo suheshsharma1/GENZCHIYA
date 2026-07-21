@@ -4,7 +4,7 @@ interface SVGLogoProps {
   className?: string;
   variant?: 'full' | 'icon' | 'dark' | 'light';
   size?: number;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export const SVGLogo: React.FC<SVGLogoProps> = ({
@@ -15,9 +15,9 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
 }) => {
   const isIcon = variant === 'icon';
 
-  const handleClick = () => {
+  const handleClick = (e?: React.MouseEvent) => {
     if (onClick) {
-      onClick();
+      if (e) onClick(e);
       return;
     }
     window.location.href = '/';
@@ -29,7 +29,7 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
       <div
         role="button"
         tabIndex={0}
-        onClick={handleClick}
+        onClick={(e) => handleClick(e)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
         className={`inline-flex items-center cursor-pointer select-none shrink-0 ${className}`}
         style={{ width: size, height: size }}
@@ -59,7 +59,7 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
     <div
       role="button"
       tabIndex={0}
-      onClick={handleClick}
+      onClick={(e) => handleClick(e)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
       className={`inline-flex items-center cursor-pointer select-none shrink-0 ${className}`}
     >
@@ -83,3 +83,4 @@ export const SVGLogo: React.FC<SVGLogoProps> = ({
 };
 
 export default SVGLogo;
+

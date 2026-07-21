@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import {
@@ -58,6 +58,7 @@ export const DemoSwitcher: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { userRole } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const activePanel = PANELS.find(p => p.key === userRole) ?? PANELS[0];
 
@@ -104,7 +105,9 @@ export const DemoSwitcher: React.FC = () => {
   const switchTo = (panel: Panel) => {
     localStorage.setItem('gc_user_role', panel.key);
     setOpen(false);
-    window.location.href = panel.route;
+    if (location.pathname + location.search !== panel.route) {
+      navigate(panel.route);
+    }
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -253,7 +256,7 @@ export const DemoSwitcher: React.FC = () => {
         style={{ width: BUBBLE, height: BUBBLE }}
       >
         <div className="w-full h-full rounded-full bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 shadow-2xl shadow-black/40 border border-white/10 flex items-center justify-center relative overflow-hidden">
-          <SVGLogo variant="icon" size={34} />
+          <SVGLogo variant="icon" size={34} onClick={(e) => e.stopPropagation()} />
           <motion.span
             animate={{ scale: [1, 1.25, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
