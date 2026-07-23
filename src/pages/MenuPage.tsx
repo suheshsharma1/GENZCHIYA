@@ -25,13 +25,20 @@ export const MenuPage: React.FC = () => {
 
   const urlTable = searchParams.get('table') || '';
 
-  // Ensure table is set in context — only when there is no active order already.
-  // If a currentOrderId exists, the table is already locked; never overwrite it from the URL.
+  // Table synchronization logic:
+  // 1. Initial page load from QR scan (urlTable present, no activeTable set yet in context): initialize activeTable
   useEffect(() => {
-    if (urlTable && !currentOrderId && activeTable !== urlTable) {
+    if (urlTable && !activeTable && !currentOrderId) {
       setTable(urlTable);
     }
   }, [urlTable, activeTable, currentOrderId, setTable]);
+
+  // 2. When activeTable changes (e.g. via TableSelectionModal), sync browser URL search param
+  useEffect(() => {
+    if (activeTable && urlTable !== activeTable) {
+      navigate(`/menu?table=${activeTable}`, { replace: true });
+    }
+  }, [activeTable, urlTable, navigate]);
 
   // Page States
   const [searchQuery, setSearchQuery] = useState('');

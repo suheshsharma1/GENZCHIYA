@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, UtensilsCrossed, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -15,6 +16,7 @@ const ALL_TABLES = Array.from({ length: 50 }, (_, i) => String(i + 1));
 const RESERVED_TABLES = new Set(['13', '25', '40']);
 
 export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const { activeTable, switchTable, orders, currentOrderId } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmTargetTable, setConfirmTargetTable] = useState<string | null>(null);
@@ -51,6 +53,12 @@ export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen
     return ALL_TABLES.filter(t => t.includes(query) || `table ${t}`.toLowerCase().includes(query.toLowerCase()));
   }, [searchQuery]);
 
+  const selectAndNavigate = (tableNum: string) => {
+    switchTable(tableNum);
+    navigate(`/menu?table=${tableNum}`, { replace: true });
+    onClose();
+  };
+
   const handleTableClick = (tableNum: string) => {
     if (tableNum === activeTable) {
       onClose();
@@ -65,16 +73,14 @@ export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen
     if (currentTableHasActiveOrder) {
       setConfirmTargetTable(tableNum);
     } else {
-      switchTable(tableNum);
-      onClose();
+      selectAndNavigate(tableNum);
     }
   };
 
   const handleConfirmSwitch = () => {
     if (confirmTargetTable) {
-      switchTable(confirmTargetTable);
+      selectAndNavigate(confirmTargetTable);
       setConfirmTargetTable(null);
-      onClose();
     }
   };
 
