@@ -168,7 +168,11 @@ export const DemoSwitcher: React.FC = () => {
     return () => document.removeEventListener('pointerdown', onDocPointerDown);
   }, [open]);
 
-  if (location.pathname === '/') return null;
+  // Hide the switcher on staff/admin routes and the landing page
+  const HIDDEN_ROUTES = ['/', '/login', '/admin', '/kitchen', '/qr-tables'];
+  if (HIDDEN_ROUTES.some(r => location.pathname === r || location.pathname.startsWith(r + '/'))) {
+    return null;
+  }
 
   return (
     <div
@@ -326,7 +330,7 @@ export const DemoSwitcher: React.FC = () => {
               {/* Footer */}
               <div style={{ padding: '7px 14px 11px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                 <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
-                <p style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.03em' }}>Development Preview — Drag to reposition</p>
+                <p style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.03em' }}>Switch Demo Role — Drag to reposition</p>
               </div>
             </div>
           </motion.div>
