@@ -44,6 +44,28 @@ const PROVIDER_CONFIG = {
   }
 };
 
+/*
+ * LIVE PAYMENT INTEGRATION (backend required)
+ *
+ * This modal is currently a frontend simulation for demo purposes.
+ * To connect real Khalti / eSewa payments:
+ *
+ * 1. Add a backend endpoint (e.g. /api/verify-payment) that:
+ *    - Receives: provider, amount, orderId, mobileNumber, transactionId
+ *    - Calls the provider's verify API using the SECRET KEY (server-side only)
+ *    - Returns: { success: boolean, transactionId?: string, status?: string }
+ *
+ * 2. In this modal, replace the setTimeout simulations with:
+ *    const res = await fetch('/api/verify-payment', { method: 'POST', body: JSON.stringify({...}) })
+ *    const data = await res.json()
+ *    if (data.success) { onSuccess(mobileNumber) }
+ *
+ * 3. Environment variables (server-side / backend only):
+ *    KHALTI_MERCHANT_ID, KHALTI_SECRET_KEY, KHALTI_VERIFY_URL
+ *    ESEWA_MERCHANT_ID, ESEWA_SECRET_KEY, ESEWA_VERIFY_URL
+ *
+ * NEVER expose secret keys in frontend code or .env.local that is committed to Git.
+ */
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,

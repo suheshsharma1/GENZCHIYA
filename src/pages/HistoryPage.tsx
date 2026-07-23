@@ -25,7 +25,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { orders, products, favorites, activeTable, toggleFavorite } = useApp();
+  const { orders, orderHistory, products, favorites, activeTable, toggleFavorite } = useApp();
 
   const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'profile'>('history');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'tea' | 'snacks'>('all');
@@ -46,13 +46,17 @@ export const HistoryPage: React.FC = () => {
     setTimeout(() => setEditSuccess(false), 3000);
   };
 
-  // Order History for the current table session (newest first).
-  // When a table is active we scope to that session; otherwise we show all
-  // completed customer orders so the history is never empty for the demo.
-  const allCustomerOrders = orders
-    .filter(o => (activeTable ? o.tableNumber === activeTable : true))
-    .filter(o => ['completed', 'served', 'pending', 'accepted', 'preparing', 'ready', 'rejected'].includes(o.status))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Order History combining orderHistory and orders (newest completed first)
+  const combinedList = [...(orderHistory || []), ...(orders || [])];
+  const uniqueMap = new Map<string, typeof combinedList[0]>();
+  combinedList.forEach(o => {
+    if (o && o.id && !uniqueMap.has(o.id)) {
+      uniqueMap.set(o.id, o);
+    }
+  });
+
+  const allCustomerOrders = Array.from(uniqueMap.values())
+    .sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
 
   // Apply Tea / Snacks category filter to history
   const customerOrders = allCustomerOrders.filter(order => {

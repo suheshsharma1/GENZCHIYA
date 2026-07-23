@@ -68,6 +68,7 @@ export interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
   estimatedTime?: number; // preparation timer in minutes
   elapsedPrepTime?: number; // elapsed cooking time in seconds (for dashboard cooking timers)
   isPriority?: boolean;

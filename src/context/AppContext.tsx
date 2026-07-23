@@ -7,8 +7,10 @@ interface AppContextType {
   products: Product[];
   categories: string[];
   orders: Order[];
+  orderHistory: Order[];
   cart: CartItem[];
   activeTable: string;
+  currentOrderId: string | null;
   activeCoupon: Coupon | null;
   couponsList: Coupon[];
   favorites: string[];
@@ -16,6 +18,8 @@ interface AppContextType {
   setUserRole: (role: 'customer' | 'cashier' | 'kitchen' | null) => void;
   currentTrackingOrder: Order | null;
   setTable: (table: string) => void;
+  switchTable: (table: string) => void;
+  startNewSession: () => void;
   addToCart: (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string) => void;
   removeFromCart: (cartItemId: string) => void;
   updateCartQuantity: (cartItemId: string, quantity: number) => void;
@@ -27,23 +31,24 @@ interface AppContextType {
   placeOrder: (customerName: string, paymentMethod: PaymentMethod, customerPhone?: string, notes?: string) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus, extra?: { rejectionReason?: string; estTime?: number; isPriority?: boolean }) => void;
   toggleProductAvailability: (productId: string) => void;
-  updateProductPrice: (productId: string, newPrice: number) => void;
-  updateProductImage: (productId: string, newImage: string) => void;
-  addProduct: (newProduct: Omit<Product, 'id' | 'available'>) => void;
+  updateProductPrice: (productId: string, price: number) => void;
+  updateProductImage: (productId: string, image: string) => void;
+  addProduct: (product: Product) => void;
   addCategory: (name: string) => boolean;
   renameCategory: (oldName: string, newName: string) => boolean;
-  deleteCategory: (category: string) => void;
-  moveProductsToCategory: (productIds: string[], category: string) => void;
+  deleteCategory: (name: string) => void;
+  moveProductsToCategory: (productIds: string[], targetCategory: string) => void;
   updateProduct: (productId: string, updates: { name: string; price: number; category: string; description: string; preparationTime: number; image: string }) => void;
   deleteProduct: (productId: string) => void;
   deleteProducts: (productIds: string[]) => void;
   toggleFavorite: (productId: string) => void;
-  loginStaff: (role: 'cashier' | 'kitchen') => boolean;
-  logoutStaff: () => void;
   getSalesReport: () => SalesReport;
   resetAllData: () => void;
+  logoutStaff: () => void;
+  loginStaff: (role: 'cashier' | 'kitchen') => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  setOrderHistory: (history: Order[]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -254,14 +259,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (saved) {
       try {
-        return updateOrderImages(JSON.parse(saved));
+        const parsed: Order[] = JSON.parse(saved);
+        const activeOnly = parsed.filter(o => !['completed', 'served', 'Completed', 'Served'].includes(o.status));
+        return updateOrderImages(activeOnly);
       } catch (err) {
         console.error('Failed to parse gc_orders from storage', err);
       }
     }
-    // Otherwise generate clean mock orders
+    return [];
+  });
+
+  const [orderHistory, setOrderHistory] = useState<Order[]>(() => {
+    const saved = localStorage.getItem('orderHistory') || localStorage.getItem('gc_order_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (err) {
+        console.error('Failed to parse gc_order_history from storage', err);
+      }
+    }
     const mocks = generateMockOrders(initialProducts);
-    localStorage.setItem('gc_orders', JSON.stringify(mocks));
+    localStorage.setItem('orderHistory', JSON.stringify(mocks));
+    localStorage.setItem('gc_order_history', JSON.stringify(mocks));
     return mocks;
   });
 
@@ -284,7 +306,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   });
 
-  const [activeTable, setActiveTable] = useState<string>('');
+  const [activeTable, setActiveTable] = useState<string>(() => {
+    return localStorage.getItem('gc_active_table') || '';
+  });
+
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(() => {
+    return localStorage.getItem('gc_current_order_id') || null;
+  });
 
   const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(() => {
     const saved = localStorage.getItem('gc_active_coupon');
@@ -365,6 +393,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [products]);
 
   useEffect(() => {
+    localStorage.setItem('gc_active_table', activeTable);
+  }, [activeTable]);
+
+  useEffect(() => {
+    if (currentOrderId) {
+      localStorage.setItem('gc_current_order_id', currentOrderId);
+    } else {
+      localStorage.removeItem('gc_current_order_id');
+    }
+  }, [currentOrderId]);
+
+  useEffect(() => {
     localStorage.setItem('gc_categories', JSON.stringify(categories));
   }, [categories]);
 
@@ -380,6 +420,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
   }, [orders, currentTrackingOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+    localStorage.setItem('gc_order_history', JSON.stringify(orderHistory));
+  }, [orderHistory]);
 
   useEffect(() => {
     localStorage.setItem('gc_cart', JSON.stringify(cart));
@@ -404,6 +449,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sync state across tabs/windows in real-time
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'orderHistory' || e.key === 'gc_order_history') && e.newValue) {
+        try {
+          const parsed: Order[] = JSON.parse(e.newValue);
+          setOrderHistory(parsed);
+        } catch (err) {
+          console.error('Failed to parse orderHistory from storage', err);
+        }
+      }
       if (e.key === 'gc_orders' && e.newValue) {
         try {
           const parsed: Order[] = JSON.parse(e.newValue);
@@ -459,6 +512,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.error('Failed to parse gc_tracking_order from storage', err);
         }
       }
+      if (e.key === 'gc_current_order_id') {
+        setCurrentOrderId(e.newValue || null);
+      }
+      if (e.key === 'gc_active_table' && e.newValue !== null) {
+        setActiveTable(e.newValue);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -490,7 +549,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const setTable = (table: string) => {
+    // If there is an active order and we're NOT clearing the table,
+    // prevent any automatic navigation from overwriting the customer's table.
+    if (currentOrderId && table && table !== activeTable) {
+      // Silently keep the existing table — the customer has an active order.
+      return;
+    }
     setActiveTable(table);
+  };
+
+  /**
+   * switchTable — explicit user action to select or switch active table.
+   * Updates state and localStorage immediately.
+   */
+  const switchTable = (table: string) => {
+    setActiveTable(table);
+    localStorage.setItem('gc_active_table', table);
+  };
+
+  /**
+   * startNewSession — call this when the customer explicitly wants to
+   * begin a new ordering session (e.g. after "Served" or tapping "New Order").
+   * Clears the active order ID and table so the next QR scan / table entry
+   * can set a fresh table without being blocked by the guard above.
+   */
+  const startNewSession = () => {
+    setCurrentOrderId(null);
+    setActiveTable('');
+    localStorage.removeItem('gc_current_order_id');
+    localStorage.removeItem('gc_active_table');
   };
 
   const addToCart = (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string) => {
@@ -621,6 +708,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending',
       payment: {
         method: paymentMethod,
+        // NOTE: For live payments, verify with backend before setting status = 'success'.
+        // Current implementation simulates success for demo purposes.
         status: paymentMethod === 'cash' ? 'pending' : 'success',
         transactionId: paymentMethod !== 'cash' ? `TXN-${Math.floor(100000000 + Math.random() * 900000000)}` : undefined,
         mobileNumber: paymentMethod === 'khalti' ? customerPhone || '9841000000' : undefined,
@@ -634,6 +723,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOrders(prevOrders => [...prevOrders, newOrder]);
     setCurrentTrackingOrder(newOrder);
     localStorage.setItem('gc_tracking_order', JSON.stringify(newOrder));
+
+    // Persist the current order ID and lock the active table for this session
+    setCurrentOrderId(newOrder.id);
+    localStorage.setItem('gc_current_order_id', newOrder.id);
+    // Also ensure the table is saved (it was set before checkout, but double-write for safety)
+    localStorage.setItem('gc_active_table', newOrder.tableNumber);
+
     clearCart();
     
     return newOrder;
@@ -644,31 +740,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     status: OrderStatus, 
     extra?: { rejectionReason?: string; estTime?: number; isPriority?: boolean }
   ) => {
-    setOrders(prevOrders => prevOrders.map(order => {
-      if (order.id === orderId) {
-        const nextOrder = {
-          ...order,
-          status,
-          updatedAt: new Date().toISOString(),
-          rejectionReason: extra?.rejectionReason ?? order.rejectionReason,
-          estimatedTime: extra?.estTime ?? order.estimatedTime,
-          isPriority: extra?.isPriority ?? order.isPriority
+    const isCompletedOrServed = status === 'served' || status === 'completed';
+
+    setOrders(prevOrders => {
+      const targetOrder = prevOrders.find(o => o.id === orderId);
+
+      if (!targetOrder) {
+        // Order might already be in orderHistory; update its status if present
+        if (isCompletedOrServed || status === 'rejected') {
+          setOrderHistory(prevHistory => {
+            const existing = prevHistory.find(h => h.id === orderId);
+            if (existing) {
+              const updatedHistory = prevHistory.map(h => h.id === orderId ? {
+                ...h,
+                status,
+                updatedAt: new Date().toISOString(),
+                completedAt: h.completedAt || new Date().toISOString()
+              } : h);
+              localStorage.setItem('orderHistory', JSON.stringify(updatedHistory));
+              localStorage.setItem('gc_order_history', JSON.stringify(updatedHistory));
+              return updatedHistory;
+            }
+            return prevHistory;
+          });
+        }
+        return prevOrders;
+      }
+
+      const updatedOrder: Order = {
+        ...targetOrder,
+        status,
+        updatedAt: new Date().toISOString(),
+        rejectionReason: extra?.rejectionReason ?? targetOrder.rejectionReason,
+        estimatedTime: extra?.estTime ?? targetOrder.estimatedTime,
+        isPriority: extra?.isPriority ?? targetOrder.isPriority
+      };
+
+      if (status === 'preparing' && !targetOrder.elapsedPrepTime) {
+        updatedOrder.elapsedPrepTime = 0;
+      }
+
+      // If the order has been completed or served, mark cash payments as successful
+      if (isCompletedOrServed && updatedOrder.payment.method === 'cash') {
+        updatedOrder.payment = {
+          ...updatedOrder.payment,
+          status: 'success',
+          paidAt: updatedOrder.payment.paidAt || new Date().toISOString()
+        };
+      }
+
+      // When completing/serving an order, move it to orderHistory and remove from active orders
+      if (isCompletedOrServed) {
+        const completedOrder: Order = {
+          ...updatedOrder,
+          completedAt: new Date().toISOString()
         };
 
-        if (status === 'preparing' && !order.elapsedPrepTime) {
-          nextOrder.elapsedPrepTime = 0;
-        }
+        setOrderHistory(prevHistory => {
+          const filtered = prevHistory.filter(o => o.id !== orderId);
+          const newHistory = [completedOrder, ...filtered];
+          localStorage.setItem('orderHistory', JSON.stringify(newHistory));
+          localStorage.setItem('gc_order_history', JSON.stringify(newHistory));
+          return newHistory;
+        });
 
-        // If the order has been completed or served, mark cash payments as successful
-        if ((status === 'served' || status === 'completed') && order.payment.method === 'cash') {
-          nextOrder.payment.status = 'success';
-          nextOrder.payment.paidAt = new Date().toISOString();
-        }
+        // Clear the active order session when this was the customer's current order
+        setCurrentOrderId(prev => {
+          if (prev === orderId) {
+            localStorage.removeItem('gc_current_order_id');
+            localStorage.removeItem('gc_active_table');
+            setActiveTable('');
+            return null;
+          }
+          return prev;
+        });
 
-        return nextOrder;
+        return prevOrders.filter(o => o.id !== orderId);
       }
-      return order;
-    }));
+
+      return prevOrders.map(o => o.id === orderId ? updatedOrder : o);
+    });
   };
 
   const toggleProductAvailability = (productId: string) => {
@@ -790,7 +941,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getSalesReport = (): SalesReport => {
-    const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'served');
+    const combined = [...orderHistory, ...orders.filter(o => ['completed', 'served', 'Completed', 'Served'].includes(o.status))];
+    const uniqueMap = new Map<string, Order>();
+    combined.forEach(o => uniqueMap.set(o.id, o));
+    const completedOrders = Array.from(uniqueMap.values());
     
     let totalRevenue = 0;
     let totalOrders = completedOrders.length;
@@ -850,20 +1004,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('gc_products');
     localStorage.removeItem('gc_categories');
     localStorage.removeItem('gc_orders');
+    localStorage.removeItem('orderHistory');
+    localStorage.removeItem('gc_order_history');
     localStorage.removeItem('gc_cart');
     localStorage.removeItem('gc_active_coupon');
     localStorage.removeItem('gc_coupons');
     localStorage.removeItem('gc_favorites');
     localStorage.removeItem('gc_tracking_order');
+    localStorage.removeItem('gc_current_order_id');
+    localStorage.removeItem('gc_active_table');
     setProducts(initialProducts);
     setCategories(Array.from(new Set(initialProducts.map(p => p.category))));
     setCouponsList(coupons);
     const mocks = generateMockOrders(initialProducts);
-    setOrders(mocks);
+    setOrders([]);
+    setOrderHistory(mocks);
+    localStorage.setItem('orderHistory', JSON.stringify(mocks));
+    localStorage.setItem('gc_order_history', JSON.stringify(mocks));
     setCart([]);
     setActiveCoupon(null);
     setFavorites([]);
     setCurrentTrackingOrder(null);
+    setCurrentOrderId(null);
+    setActiveTable('');
   };
 
   return (
@@ -871,8 +1034,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       products,
       categories,
       orders,
+      orderHistory,
       cart,
       activeTable,
+      currentOrderId,
       activeCoupon,
       couponsList,
       favorites,
@@ -880,6 +1045,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUserRole,
       currentTrackingOrder,
       setTable,
+      switchTable,
+      startNewSession,
       addToCart,
       removeFromCart,
       updateCartQuantity,
@@ -907,7 +1074,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       getSalesReport,
       resetAllData,
       isDarkMode,
-      toggleTheme
+      toggleTheme,
+      setOrderHistory
     }}>
       {children}
     </AppContext.Provider>

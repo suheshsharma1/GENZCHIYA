@@ -9,7 +9,7 @@ import {
   ShoppingBag, Users, DollarSign, Check, X, Printer, TrendingUp, 
   TrendingDown, Plus, LogOut, RefreshCw, BarChart2, Coffee, 
   Layers, FileText, CheckCircle2, AlertCircle, Trash, Search, Upload, Edit2,
-  Bell, LayoutGrid, List, ChefHat, Timer, BellRing, QrCode, Download, Minus,
+  Bell, LayoutGrid, List, ChefHat, Timer, BellRing, QrCode, Download, Minus, Clock,
   Folder, FolderOpen, ChevronDown, ChevronRight, Ticket, Tag
 } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -129,7 +129,7 @@ const TableQRCard: React.FC<TableCardProps> = ({ tableNumber, baseUrl }) => {
 export const SplitDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { 
-    orders, products, categories, updateOrderStatus, toggleProductAvailability, 
+    orders, orderHistory, products, categories, updateOrderStatus, toggleProductAvailability, 
     updateProduct, updateProductImage, deleteProduct, deleteProducts, 
     addCategory, renameCategory, deleteCategory, moveProductsToCategory,
     getSalesReport, resetAllData, logoutStaff,
@@ -146,7 +146,8 @@ export const SplitDashboard: React.FC = () => {
   });
 
   // Cashier Active Tab State
-  const [cashierTab, setCashierTab] = useState<'orders' | 'menu' | 'reports' | 'qr' | 'promos'>('orders');
+  const [cashierTab, setCashierTab] = useState<'orders' | 'history' | 'menu' | 'reports' | 'qr' | 'promos'>('orders');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'completed' | 'served' | 'rejected'>('all');
 
   // Promo code creator state
   const [promoCode, setPromoCode] = useState('');
@@ -713,6 +714,7 @@ export const SplitDashboard: React.FC = () => {
               <div className="flex gap-1.5 bg-slate-100 dark:bg-brand-dark-bg p-1 rounded-xl border border-slate-200/40 dark:border-brand-dark-border/20">
                 {[
                   { key: 'orders', label: 'Live Queue' },
+                  { key: 'history', label: 'Order History' },
                   { key: 'menu', label: 'Menu Editor' },
                   { key: 'reports', label: 'Sales Reports' },
                   { key: 'qr', label: 'Generate QR' },
@@ -848,6 +850,87 @@ export const SplitDashboard: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* TAB: Order History */}
+            {cashierTab === 'history' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
+                  <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock size={14} />
+                    Order History ({orderHistory.length})
+                  </h3>
+                  <div className="flex gap-1 bg-slate-100 dark:bg-brand-dark-bg p-1 rounded-lg border border-slate-200/40 dark:border-brand-dark-border/20 overflow-x-auto">
+                    {[
+                      { key: 'all', label: 'All' },
+                      { key: 'completed', label: 'Completed' },
+                      { key: 'served', label: 'Served' },
+                      { key: 'rejected', label: 'Rejected' },
+                    ].map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setHistoryFilter(f.key as any)}
+                        className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase transition-all cursor-pointer whitespace-nowrap ${
+                          historyFilter === f.key
+                            ? 'bg-white dark:bg-brand-dark-card text-brand-emerald dark:text-brand-amber shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(() => {
+                  const filtered = historyFilter === 'all'
+                    ? orderHistory
+                    : orderHistory.filter(o => o.status.toLowerCase() === historyFilter.toLowerCase());
+                  const sorted = [...filtered].sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
+                  return sorted.length === 0 ? (
+                    <div className="text-center py-16 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/40">
+                      <div className="p-4 bg-slate-100 dark:bg-brand-dark-border/20 rounded-2xl inline-block mb-2">
+                        <Clock size={28} className="text-slate-300 dark:text-slate-600" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-400">No completed orders in history yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                      {sorted.map(order => (
+                        <div key={order.id} className="bg-white dark:bg-brand-dark-card rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 shadow-sm overflow-hidden text-left">
+                          <div className="p-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono font-bold text-slate-400">#{order.id}</span>
+                                <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                  order.status === 'completed' || order.status === 'served' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400'
+                                  : order.status === 'rejected' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400'
+                                  : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
+                                }`}>
+                                  {order.status}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Table #{order.tableNumber}</span>
+                                {order.customerName && <span className="text-[9px] text-slate-400">({order.customerName})</span>}
+                              </div>
+                              <p className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 truncate">
+                                {order.items.map(i => `${i.product.name} x${i.quantity}`).join(', ')}
+                              </p>
+                              <p className="text-[9px] text-slate-400">
+                                Created: {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {order.completedAt && (
+                                  <span> · Completed: {new Date(order.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                )}
+                                {' '}· {order.payment.method.toUpperCase()} ({order.payment.status.toUpperCase()})
+                              </p>
+                            </div>
+                            <span className="text-xs font-black text-brand-emerald dark:text-brand-amber shrink-0">Rs. {order.total.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

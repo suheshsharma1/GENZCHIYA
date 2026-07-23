@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -12,11 +12,31 @@ import { downloadReceiptPDF } from '../utils/pdf';
 import { SVGLogo } from '../components/SVGLogo';
 
 export const OrderTrackingPage: React.FC = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+  const { orderId: routeOrderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { orders, updateOrderStatus } = useApp();
+  const { orders, orderHistory, currentOrderId, activeTable, updateOrderStatus } = useApp();
 
-  const order = orders.find(o => o.id === orderId);
+  const targetId = routeOrderId || currentOrderId;
+
+  const order = useMemo(() => {
+    if (targetId) {
+      const match = orders.find(o => o.id === targetId) || orderHistory.find(o => o.id === targetId);
+      if (match) return match;
+    }
+    // Fallback search by activeTable
+    if (activeTable) {
+      const tableActiveOrders = orders
+        .filter(o => o.tableNumber === activeTable && !['served', 'completed', 'rejected'].includes(o.status))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      if (tableActiveOrders.length > 0) return tableActiveOrders[0];
+
+      const tableHistoryOrders = orderHistory
+        .filter(o => o.tableNumber === activeTable)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      if (tableHistoryOrders.length > 0) return tableHistoryOrders[0];
+    }
+    return null;
+  }, [targetId, orders, orderHistory, activeTable]);
 
   // States
   const [downloading, setDownloading] = useState(false);

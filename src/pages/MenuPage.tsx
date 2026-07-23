@@ -11,31 +11,34 @@ import { CATEGORY_MAP } from '../data/products';
 import { SVGLogo } from '../components/SVGLogo';
 import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
+import { TableSelectionModal } from '../components/TableSelectionModal';
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
   const { 
-    products, cart, activeTable, activeCoupon, couponsList, favorites, 
+    products, cart, activeTable, currentOrderId, activeCoupon, couponsList, favorites, 
     addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, 
-    placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme 
+    placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession
   } = useApp();
 
   const urlTable = searchParams.get('table') || '';
 
-  // Ensure table is set in context
+  // Ensure table is set in context — only when there is no active order already.
+  // If a currentOrderId exists, the table is already locked; never overwrite it from the URL.
   useEffect(() => {
-    if (urlTable && activeTable !== urlTable) {
+    if (urlTable && !currentOrderId && activeTable !== urlTable) {
       setTable(urlTable);
     }
-  }, [urlTable, activeTable, setTable]);
+  }, [urlTable, activeTable, currentOrderId, setTable]);
 
   // Page States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showTableModal, setShowTableModal] = useState(false);
   
   // Customization selection state
   const [customizationSelections, setCustomizationSelections] = useState<SelectedCustomization[]>([]);
@@ -238,10 +241,14 @@ export const MenuPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Table Badge */}
-          <div className="bg-brand-emerald dark:bg-brand-amber text-white font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+          <button 
+            onClick={() => setShowTableModal(true)}
+            className="bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg font-extrabold text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer border border-white/10"
+            title="Click to select or switch table"
+          >
             <UtensilsCrossed size={12} />
-            <span>Table {activeTable || 'Takeaway'}</span>
-          </div>
+            <span>Table #{activeTable || 'Select'}</span>
+          </button>
 
           {/* Theme Button */}
           <button 
@@ -261,6 +268,34 @@ export const MenuPage: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Active-order sticky banner — shown when customer has a placed order */}
+      {currentOrderId && (
+        <div
+          className="sticky top-[57px] z-30 bg-brand-emerald dark:bg-brand-amber px-4 py-2 flex items-center justify-between max-w-7xl mx-auto w-full"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}
+        >
+          <div className="flex items-center gap-2 text-white dark:text-brand-dark-bg">
+            <HeartHandshake size={14} />
+            <span className="text-xs font-bold">Your order is being prepared</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/tracking/${currentOrderId}`)}
+              className="text-xs font-extrabold text-white dark:text-brand-dark-bg underline underline-offset-2 cursor-pointer"
+            >
+              Track Order →
+            </button>
+            <button
+              onClick={startNewSession}
+              className="text-[10px] font-bold text-white/70 dark:text-brand-dark-bg/70 hover:text-white dark:hover:text-brand-dark-bg cursor-pointer"
+              title="Start a new order (clears current session)"
+            >
+              New Session
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 mt-6">
         
@@ -1108,6 +1143,12 @@ export const MenuPage: React.FC = () => {
           provider={paymentMethod as 'khalti' | 'esewa'}
         />
       ) : null}
+
+      {/* Table Selection & Switcher Modal */}
+      <TableSelectionModal
+        isOpen={showTableModal}
+        onClose={() => setShowTableModal(false)}
+      />
 
     </div>
   );

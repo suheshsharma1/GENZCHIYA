@@ -113,21 +113,21 @@ const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ tableNumber }) => {
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setTable, activeTable, couponsList } = useApp();
+  const { setTable, activeTable, couponsList, currentOrderId, startNewSession } = useApp();
 
   const [tableInput, setTableInput] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success'>('idle');
   const [scannedTable, setScannedTable] = useState<string | null>(null);
 
-  // Auto-detect table parameter from URL
+  // Auto-detect table parameter from URL — only when there is no active order
   useEffect(() => {
     const tableParam = searchParams.get('table');
-    if (tableParam) {
+    if (tableParam && !currentOrderId) {
       setTable(tableParam);
       setTableInput(tableParam);
     }
-  }, [searchParams, setTable]);
+  }, [searchParams, setTable, currentOrderId]);
 
   const handleStartOrdering = (tableNum: string) => {
     if (!tableNum) return;
@@ -142,6 +142,11 @@ export const LandingPage: React.FC = () => {
   };
 
   const handleSimulateScan = () => {
+    // If an active order already exists, redirect the customer to their tracking page
+    if (currentOrderId) {
+      navigate(`/tracking/${currentOrderId}`);
+      return;
+    }
     setScanStatus('scanning');
     setTimeout(() => {
       const mockTable = String(Math.floor(1 + Math.random() * 25));
@@ -248,12 +253,22 @@ export const LandingPage: React.FC = () => {
                     <span>View Digital Menu</span>
                     <ArrowRight size={18} />
                   </button>
-                  <button
-                    onClick={() => setTable('')}
-                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors w-full text-center"
-                  >
-                    Not at Table #{activeTable}? Choose another
-                  </button>
+                  {/* Only offer table-change if there's no active order */}
+                  {currentOrderId ? (
+                    <button
+                      onClick={() => navigate(`/tracking/${currentOrderId}`)}
+                      className="w-full text-xs font-bold text-brand-emerald dark:text-brand-amber underline underline-offset-2 text-center cursor-pointer"
+                    >
+                      Track your current order →
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setTable(''); startNewSession(); }}
+                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors w-full text-center"
+                    >
+                      Not at Table #{activeTable}? Choose another
+                    </button>
+                  )}
                 </div>
               ) : !showScanner ? (
                 <div className="space-y-5">
