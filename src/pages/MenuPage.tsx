@@ -12,6 +12,7 @@ import { SVGLogo } from '../components/SVGLogo';
 import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
+import { calculateCartPricing } from '../utils/pricing';
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -186,24 +187,21 @@ export const MenuPage: React.FC = () => {
   };
 
   // Calculate pricing breakdown
-  const cartSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => {
-      const customCost = item.selectedCustomizations.reduce((cSum, cust) => 
-        cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
-      );
-      return sum + (item.product.price + customCost) * item.quantity;
-    }, 0);
-  }, [cart]);
+  const basePricing = useMemo(() => calculateCartPricing(cart, 0), [cart]);
 
-  const discountAmount = useMemo(() => {
+  const couponDiscount = useMemo(() => {
     if (!activeCoupon) return 0;
     if (activeCoupon.discountType === 'percentage') {
-      return Math.round((cartSubtotal * activeCoupon.value) / 100);
+      return Math.round((basePricing.subtotal * activeCoupon.value) / 100);
     }
     return activeCoupon.value;
-  }, [activeCoupon, cartSubtotal]);
+  }, [activeCoupon, basePricing.subtotal]);
 
-  const cartGrandTotal = cartSubtotal - discountAmount;
+  const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
+
+  const cartSubtotal = cartPricing.subtotal;
+  const discountAmount = cartPricing.offerDiscount + couponDiscount;
+  const cartGrandTotal = cartPricing.total;
 
   // Coupon Submission
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -344,6 +342,18 @@ export const MenuPage: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        <div className="-mx-4 px-4 mb-3">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Ticket size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Special Offer</span>
+            </div>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Buy 5 cups of the same item and get 1 free. This applies to all items in the menu.
+            </p>
+          </div>
         </div>
 
         {/* ── Today's Offers Strip ── */}
@@ -894,89 +904,25 @@ export const MenuPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Cart pricing summary details & Coupon support */}
+                {/* Cart pricing summary details */}
                 {cart.length > 0 && (
                   <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
-                    {/* Coupon Form */}
-                    {!activeCoupon ? (
-                      <>
-                        {/* Available codes hint */}
-                        {couponsList.length > 0 && (
-                          <div className="space-y-1.5">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                              <Ticket size={9} />
-                              Available Codes
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {couponsList.map((c) => (
-                                <button
-                                  key={c.code}
-                                  type="button"
-                                  onClick={() => setCouponInput(c.code)}
-                                  title={c.description || ''}
-                                  className="font-mono text-[9px] font-black tracking-widest text-brand-emerald dark:text-brand-amber bg-brand-emerald/8 dark:bg-brand-amber/10 border border-brand-emerald/20 dark:border-brand-amber/20 px-2 py-1 rounded-lg hover:bg-brand-emerald/15 dark:hover:bg-brand-amber/20 transition-colors cursor-pointer"
-                                >
-                                  {c.code} &mdash; {c.discountType === 'percentage' ? `${c.value}%` : `Rs.${c.value}`} off
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="Enter Coupon Code"
-                              value={couponInput}
-                              onChange={(e) => setCouponInput(e.target.value)}
-                              className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
-                          >
-                            Apply
-                          </button>
-                        </form>
-                      </>
-                    ) : (
-                      <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
-                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                          <Tag size={14} className="stroke-[2.5]" />
-                          <div className="text-left">
-                            <p className="text-[11px] font-bold tracking-wider">{activeCoupon.code}</p>
-                            <p className="text-[9px] text-emerald-600/80 dark:text-emerald-500/80">{activeCoupon.description}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={removeCoupon}
-                          className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-
-                    {couponMessage && (
-                      <p className={`text-[10px] font-semibold px-1 mt-[-6px] ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {couponMessage.text}
-                      </p>
-                    )}
-
                     {/* Breakdown */}
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between text-slate-400">
                         <span>Items Subtotal:</span>
                         <span>Rs. {cartSubtotal.toLocaleString()}</span>
                       </div>
-                      {activeCoupon && (
-                        <div className="flex justify-between text-emerald-600 font-semibold">
-                          <span>Coupon Discount:</span>
-                          <span>-Rs. {discountAmount.toLocaleString()}</span>
+                      {cartPricing.offerDiscount > 0 && (
+                        <div className="flex justify-between text-amber-600 font-semibold">
+                          <span>Buy 5, Get 1 Free:</span>
+                          <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
                         </div>
                       )}
+
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                        Buy 5 products of the same item and 1 product will be discounted.
+                      </div>
                       
                       <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
                         <span>Grand Total:</span>

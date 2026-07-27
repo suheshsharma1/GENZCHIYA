@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, Order, CartItem, SelectedCustomization, OrderStatus, PaymentMethod, Coupon, SalesReport } from '../types';
 import { products as initialProducts } from '../data/products';
 import { coupons } from '../data/coupons';
+import { calculateCartPricing } from '../utils/pricing';
 
 interface AppContextType {
   products: Product[];
@@ -691,8 +692,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const serviceCharge = 0; // Math.round(subtotal * 0.10);
     const tax = 0; // Math.round((subtotal + serviceCharge) * 0.13);
-    const discount = calculateDiscount(subtotal, activeCoupon);
-    const total = subtotal - discount;
+    const couponDiscount = calculateDiscount(subtotal, activeCoupon);
+    const pricing = calculateCartPricing(cart, couponDiscount);
+    const discount = pricing.offerDiscount + couponDiscount;
+    const total = pricing.total;
 
     const newOrder: Order = {
       id: `CS-${1000 + orders.length + 1}`,
