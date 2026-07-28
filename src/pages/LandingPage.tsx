@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, ArrowRight, Sparkles, Coffee, Clock, ShieldCheck, Ticket, Tag } from 'lucide-react';
+import { QrCode, ArrowRight, Sparkles, Coffee, Clock, ShieldCheck, Ticket } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
 import QRCode from 'qrcode';
@@ -396,67 +396,42 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Promo Codes Banner ── */}
-            {couponsList.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="w-full"
-              >
-                {/* Label */}
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Tag size={11} className="text-brand-amber" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-brand-amber">Today's Offers</span>
-                </div>
+            {/* ── Saturday Ad Banner ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="w-full"
+            >
+              <div className="relative overflow-hidden rounded-[2rem] border border-white/40 bg-gradient-to-r from-[#ff8a2b] via-[#ffb347] to-[#ffd25f] p-5 text-white shadow-[0_25px_70px_-24px_rgba(234,88,12,0.55)]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.35),transparent_45%)]" />
+                <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+                <div className="absolute bottom-0 left-0 h-20 w-20 rounded-full bg-brand-emerald/20 blur-2xl" />
 
-                {/* Scrollable promo cards */}
-                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
-                  {couponsList.map((c) => (
-                    <div
-                      key={c.code}
-                      className="snap-start shrink-0 bg-gradient-to-br from-brand-emerald/8 to-brand-amber/8 dark:from-brand-emerald/15 dark:to-brand-amber/15 border border-brand-emerald/20 dark:border-brand-amber/20 rounded-2xl px-4 py-3 min-w-[170px] relative overflow-hidden"
-                    >
-                      {/* decorative dashes on left */}
-                      <div className="absolute left-0 inset-y-0 w-1.5 bg-gradient-to-b from-brand-emerald to-brand-amber rounded-l-2xl" />
-
-                      <div className="pl-2 space-y-1.5">
-                        {/* Discount badge */}
-                        <div className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${
-                          c.discountType === 'percentage'
-                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                        }`}>
-                          <Ticket size={9} />
-                          {c.discountType === 'percentage' ? `${c.value}% OFF` : `Rs. ${c.value} OFF`}
-                        </div>
-
-                        {/* Code */}
-                        <p className="font-mono font-black text-brand-emerald dark:text-brand-amber tracking-widest text-xs leading-none">
-                          {c.code}
-                        </p>
-
-                        {/* Min order */}
-                        <p className="text-[9px] text-slate-400 dark:text-slate-500">
-                          Min order Rs. {c.minOrder}
-                        </p>
-
-                        {/* Description */}
-                        {c.description && (
-                          <p className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
-                            {c.description}
-                          </p>
-                        )}
-                      </div>
+                <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-2">
+                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] backdrop-blur-sm">
+                      <Ticket size={12} />
+                      Saturday Special
                     </div>
-                  ))}
-                </div>
+                    <h3 className="text-2xl font-black leading-tight sm:text-3xl">
+                      30% OFF All Items
+                    </h3>
+                    <p className="max-w-xl text-sm leading-relaxed text-white/90 sm:text-[15px]">
+                      Enjoy amazing weekend savings on every tea, snack, and favorite dish. No extra code needed — the discount is already applied.
+                    </p>
+                  </div>
 
-                <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-2">
-                  💡 Apply these codes in your cart during checkout
-                </p>
-              </motion.div>
-            )}
+                  <div className="min-w-[150px] rounded-[1.2rem] border border-white/30 bg-white/15 p-3 text-center backdrop-blur-sm">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/80">
+                      This Saturday
+                    </p>
+                    <p className="text-3xl font-black leading-none">30%</p>
+                    <p className="text-[11px] font-semibold text-white/90">OFF everything</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </main>
