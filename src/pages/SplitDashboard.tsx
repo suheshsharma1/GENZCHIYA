@@ -130,7 +130,7 @@ export const SplitDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { 
     orders, orderHistory, products, categories, updateOrderStatus, toggleProductAvailability, 
-    updateProduct, updateProductImage, deleteProduct, deleteProducts, 
+    updateProduct, updateProductImage, deleteProduct, deleteProducts, addProduct,
     addCategory, renameCategory, deleteCategory, moveProductsToCategory,
     getSalesReport, resetAllData, logoutStaff,
     couponsList, addCoupon, deleteCoupon
@@ -182,6 +182,7 @@ export const SplitDashboard: React.FC = () => {
 
   // Menu editor modal states
   const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditImageModal, setShowEditImageModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
@@ -194,6 +195,15 @@ export const SplitDashboard: React.FC = () => {
   const [editProdPrep, setEditProdPrep] = useState(5);
   const [editProductImage, setEditProductImage] = useState('');
   const [editProdBlobPreview, setEditProdBlobPreview] = useState('');
+
+  // Add product form state
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState(0);
+  const [newProductCategory, setNewProductCategory] = useState('tea');
+  const [newProductDesc, setNewProductDesc] = useState('');
+  const [newProductPrep, setNewProductPrep] = useState(5);
+  const [newProductImage, setNewProductImage] = useState('');
+  const [newProductBlobPreview, setNewProductBlobPreview] = useState('');
 
   // Edit image form state
   const [editingProductId, setEditingProductId] = useState('');
@@ -427,6 +437,42 @@ export const SplitDashboard: React.FC = () => {
     setEditProductImage(product.image);
     setEditProdBlobPreview('');
     setShowEditProductModal(true);
+  };
+
+  const openAddProductModal = (category = 'tea') => {
+    setNewProductName('');
+    setNewProductPrice(0);
+    setNewProductCategory(category);
+    setNewProductDesc('');
+    setNewProductPrep(5);
+    setNewProductImage('');
+    setNewProductBlobPreview('');
+    setShowAddProductModal(true);
+  };
+
+  const handleAddProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = newProductName.trim();
+    const trimmedCategory = newProductCategory.trim().toLowerCase();
+    if (!trimmedName || !newProductPrice) return;
+
+    addProduct({
+      name: trimmedName,
+      price: Number(newProductPrice),
+      category: trimmedCategory || 'tea',
+      description: newProductDesc.trim(),
+      preparationTime: Number(newProductPrep),
+      image: newProductImage.trim()
+    });
+
+    showSuccess(`Added "${trimmedName}" to ${trimmedCategory || 'tea'}.`);
+    setShowAddProductModal(false);
+    setNewProductName('');
+    setNewProductPrice(0);
+    setNewProductCategory('tea');
+    setNewProductDesc('');
+    setNewProductPrep(5);
+    setNewProductImage('');
   };
 
   const handleEditProductSubmit = (e: React.FormEvent) => {
@@ -988,6 +1034,13 @@ export const SplitDashboard: React.FC = () => {
                             {isCollapsed ? <Folder size={16} className="text-brand-amber shrink-0" /> : <FolderOpen size={16} className="text-brand-amber shrink-0" />}
                             <span className="font-extrabold text-sm text-slate-800 dark:text-white capitalize truncate">{cat}</span>
                             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-brand-dark-bg px-2 py-0.5 rounded-full shrink-0">{count}</span>
+                          </button>
+                          <button
+                            onClick={() => openAddProductModal(cat)}
+                            className="p-1.5 rounded-lg text-brand-emerald hover:bg-emerald-50 dark:hover:bg-emerald-950/20 cursor-pointer"
+                            title="Add Item to Category"
+                          >
+                            <Plus size={12} />
                           </button>
                           <button
                             onClick={() => { setRenamingCategory(cat); setRenameCategoryValue(cat); setShowRenameCategoryModal(true); }}
@@ -1633,6 +1686,90 @@ export const SplitDashboard: React.FC = () => {
                   <button onClick={() => setShowRejectModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Add Product Modal */}
+        {showAddProductModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddProductModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Add Product</h4>
+              <form onSubmit={handleAddProductSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Name</label>
+                  <input type="text" required value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Price (Rs.)</label>
+                    <input type="number" required min="0" value={newProductPrice} onChange={(e) => setNewProductPrice(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Prep Time (mins)</label>
+                    <input type="number" required min="1" value={newProductPrep} onChange={(e) => setNewProductPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
+                  <select value={newProductCategory} onChange={(e) => setNewProductCategory(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none capitalize">
+                    {categories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Description</label>
+                  <input type="text" value={newProductDesc} onChange={(e) => setNewProductDesc(e.target.value)} placeholder="Description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Image Path</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="split-add-prod-image-path"
+                      type="text"
+                      value={newProductImage}
+                      onChange={(e) => { setNewProductImage(e.target.value); setNewProductBlobPreview(''); }}
+                      placeholder="/images/products/my-item.jpg"
+                      className="flex-1 px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none font-mono"
+                    />
+                    <label
+                      htmlFor="split-add-prod-file-pick"
+                      className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      <Upload size={12} /> Browse
+                      <input
+                        id="split-add-prod-file-pick"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setNewProductImage(`/images/products/${file.name}`);
+                            setNewProductBlobPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {(newProductBlobPreview || newProductImage) && (
+                    <div className="mt-1 w-full h-24 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
+                      <img
+                        src={newProductBlobPreview || newProductImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
+                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Add Item</button>
+                  <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
