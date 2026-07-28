@@ -356,43 +356,6 @@ export const MenuPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Today's Offers Strip ── */}
-        {couponsList.length > 0 && (
-          <div className="-mx-4 px-4 mb-2">
-            <div className="bg-gradient-to-r from-brand-emerald/5 via-brand-amber/5 to-brand-emerald/5 dark:from-brand-emerald/10 dark:via-brand-amber/10 dark:to-brand-emerald/10 border border-brand-amber/15 dark:border-brand-amber/20 rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Ticket size={12} className="text-brand-amber shrink-0" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-brand-amber">Today's Offers — Apply in Cart</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                {couponsList.map((c) => (
-                  <button
-                    key={c.code}
-                    onClick={() => {
-                      // Copy code to clipboard + open cart
-                      navigator.clipboard?.writeText(c.code).catch(() => {});
-                      setShowCart(true);
-                    }}
-                    title={`Tap to copy ${c.code} and open cart`}
-                    className="shrink-0 flex items-center gap-2 bg-white dark:bg-brand-dark-card border border-brand-emerald/20 dark:border-brand-amber/20 rounded-xl px-3 py-2 hover:border-brand-emerald dark:hover:border-brand-amber transition-all cursor-pointer group"
-                  >
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
-                      c.discountType === 'percentage'
-                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                    }`}>
-                      {c.discountType === 'percentage' ? `${c.value}% OFF` : `Rs.${c.value} OFF`}
-                    </span>
-                    <span className="font-mono font-black text-[10px] text-brand-emerald dark:text-brand-amber tracking-widest">
-                      {c.code}
-                    </span>
-                    <span className="text-[8px] text-slate-400 hidden group-hover:inline">tap to copy</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 2. Products Grid */}
         <div className="mt-6">
