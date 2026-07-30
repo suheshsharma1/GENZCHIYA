@@ -1,6 +1,9 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useApp } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import PromoBanner from './components/PromoBanner';
+import DemoSwitcher from './components/DemoSwitcher';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -11,7 +14,7 @@ import HistoryPage from './pages/HistoryPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import SplitDashboard from './pages/SplitDashboard';
 import QRTablesPage from './pages/QRTablesPage';
-import { DemoSwitcher } from './components/DemoSwitcher';
+import { CounterQRPage } from './pages/CounterQRPage';
 
 // Protected Route Guard
 const ProtectedRoute: React.FC<{ 
@@ -19,27 +22,43 @@ const ProtectedRoute: React.FC<{
   allowedRole: 'cashier' | 'kitchen' | 'staff'
 }> = ({ children, allowedRole }) => {
   const { userRole } = useApp();
-  const effectiveRole = userRole || localStorage.getItem('gc_user_role');
+  const localStorageRole = localStorage.getItem('gc_user_role');
+  const effectiveRole = localStorageRole || userRole;
 
   if (allowedRole === 'staff') {
     if (effectiveRole !== 'cashier' && effectiveRole !== 'kitchen') {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
     }
     return <>{children}</>;
   }
 
   if (effectiveRole !== allowedRole) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 };
 
+// Promo banner only on customer-facing pages
+const PROMO_BANNER_ROUTES = ['/', '/menu', '/tracking', '/history', '/about', '/qr-tables', '/counter-qr'];
+const HIDDEN_BANNER_ROUTES_PREFIXES = ['/admin', '/kitchen', '/login', '/staff'];
+
+const PromoBannerRoute: React.FC = () => {
+  const location = useLocation();
+  const isHidden = HIDDEN_BANNER_ROUTES_PREFIXES.some(r => 
+    location.pathname === r || location.pathname.startsWith(r + '/')
+  );
+  const isCustomerRoute = PROMO_BANNER_ROUTES.some(r => location.pathname === r || location.pathname.startsWith(r + '/'));
+  if (isHidden || !isCustomerRoute) return null;
+  return <PromoBanner />;
+};
+
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <DemoSwitcher />
-      <Routes>
+      <ErrorBoundary>
+        <PromoBannerRoute />
+        <Routes>
         {/* Customer Facing Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/about" element={<AboutPage />} />
@@ -50,6 +69,7 @@ export const App: React.FC = () => {
 
         {/* Staff Auth Portal */}
         <Route path="/login" element={<AdminLoginPage />} />
+        <Route path="/staff/login" element={<AdminLoginPage />} />
 
         {/* Staff Protected Routes */}
         <Route 
@@ -76,10 +96,20 @@ export const App: React.FC = () => {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/counter-qr" 
+          element={
+            <ProtectedRoute allowedRole="cashier">
+              <CounterQRPage />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* Fallback redirect to homepage */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+        <DemoSwitcher />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 };

@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket, Check,
-  ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed 
+  ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed, QrCode 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Product, SelectedCustomization, CartItem } from '../types';
@@ -12,26 +12,36 @@ import { SVGLogo } from '../components/SVGLogo';
 import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
+import { CelebrationModal } from '../components/CelebrationModal';
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  const { 
-    products, cart, activeTable, currentOrderId, activeCoupon, couponsList, favorites, 
-    addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, 
-    placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession
-  } = useApp();
+   const { 
+     products, cart, activeTable, currentOrderId, activeCoupon, couponsList: _couponsList, favorites, 
+     addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, calculateCartPricing,
+     placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession,
+     teaGroupCount, celebrationActive, celebrationMessage, celebrateFreeTea, dismissCelebration
+   } = useApp();
 
   const urlTable = searchParams.get('table') || '';
+  const urlCategory = searchParams.get('category') || '';
 
   // Table synchronization logic:
-  // 1. Initial page load from QR scan (urlTable present, no activeTable set yet in context): initialize activeTable
+  // 1. Initial page load from QR scan (urlTable present): initialize/sync activeTable
   useEffect(() => {
-    if (urlTable && !activeTable && !currentOrderId) {
+    if (urlTable && urlTable !== activeTable) {
       setTable(urlTable);
     }
-  }, [urlTable, activeTable, currentOrderId, setTable]);
+  }, [urlTable, activeTable, setTable]);
+
+  // Initialize category from URL if present
+  useEffect(() => {
+    if (urlCategory && ['tea', 'coffee', 'cold-drinks', 'all'].includes(urlCategory)) {
+      setSelectedCategory(urlCategory);
+    }
+  }, [urlCategory]);
 
   // 2. When activeTable changes (e.g. via TableSelectionModal), sync browser URL search param
   useEffect(() => {
@@ -43,7 +53,7 @@ export const MenuPage: React.FC = () => {
   // Page States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showCart, setShowCart] = useState(false);
+   const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showTableModal, setShowTableModal] = useState(false);
   
@@ -54,8 +64,8 @@ export const MenuPage: React.FC = () => {
 
   // Checkout modal state
   const [showCheckout, setShowCheckout] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'khalti' | 'esewa' | 'cash'>('khalti');
+  const [tableNumber, setTableNumber] = useState(activeTable || '');
+  const [paymentMethod, setPaymentMethod] = useState<'khalti' | 'cash'>('khalti');
   const [checkoutNotes, setCheckoutNotes] = useState('');
 
   // Add-to-cart success toast (non-intrusive, auto-dismiss)
@@ -93,7 +103,7 @@ export const MenuPage: React.FC = () => {
   // Coupon state
   const [couponInput, setCouponInput] = useState('');
   const [couponMessage, setCouponMessage] = useState<{ success: boolean; text: string } | null>(null);
-
+  
   // Filter products by search & category
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
@@ -129,6 +139,17 @@ export const MenuPage: React.FC = () => {
     }
     setCustomizationSelections(initialSelections);
   };
+
+  // Auto-open product order/customization modal if product query param is present in URL
+  const urlProduct = searchParams.get('product') || searchParams.get('productId') || '';
+  useEffect(() => {
+    if (urlProduct && products.length > 0) {
+      const match = products.find(p => p.id === urlProduct || p.name.toLowerCase().includes(urlProduct.toLowerCase()));
+      if (match) {
+        handleOpenCustomizations(match);
+      }
+    }
+  }, [urlProduct, products]);
 
   // Handle choice select (radio-style)
   const handleSelectRadio = (groupName: string, optionName: string, price: number) => {
@@ -185,25 +206,21 @@ export const MenuPage: React.FC = () => {
     showAddToast(addedName, addedQty, totalCount);
   };
 
-  // Calculate pricing breakdown
-  const cartSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => {
-      const customCost = item.selectedCustomizations.reduce((cSum, cust) => 
-        cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
-      );
-      return sum + (item.product.price + customCost) * item.quantity;
-    }, 0);
-  }, [cart]);
+   const basePricing = useMemo(() => calculateCartPricing(cart), [cart]);
 
-  const discountAmount = useMemo(() => {
+  const couponDiscount = useMemo(() => {
     if (!activeCoupon) return 0;
     if (activeCoupon.discountType === 'percentage') {
-      return Math.round((cartSubtotal * activeCoupon.value) / 100);
+      return Math.round((basePricing.subtotal * activeCoupon.value) / 100);
     }
     return activeCoupon.value;
-  }, [activeCoupon, cartSubtotal]);
+  }, [activeCoupon, basePricing.subtotal]);
 
-  const cartGrandTotal = cartSubtotal - discountAmount;
+   const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
+
+   const cartSubtotal = cartPricing.subtotal;
+   const discountAmount = cartPricing.offerDiscount + couponDiscount;
+   const cartGrandTotal = cartPricing.total;
 
   // Coupon Submission
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -220,7 +237,7 @@ export const MenuPage: React.FC = () => {
     e.preventDefault();
     if (cart.length === 0) return;
     
-    if (paymentMethod === 'khalti' || paymentMethod === 'esewa') {
+    if (paymentMethod === 'khalti') {
       setShowPaymentGateway(true);
     } else {
       processOrderPlacement();
@@ -228,7 +245,10 @@ export const MenuPage: React.FC = () => {
   };
 
   const processOrderPlacement = () => {
-    const placed = placeOrder(customerName, paymentMethod, '', checkoutNotes);
+    const placed = placeOrder(tableNumber, paymentMethod, '', checkoutNotes);
+    if (tableNumber) {
+      setTable(tableNumber);
+    }
     setShowCheckout(false);
     setShowCart(false);
     navigate(`/tracking/${placed.id}`);
@@ -254,7 +274,7 @@ export const MenuPage: React.FC = () => {
             title="Click to select or switch table"
           >
             <UtensilsCrossed size={12} />
-            <span>Table #{activeTable || 'Select'}</span>
+            <span>Table #{activeTable || urlTable || 'Select'}</span>
           </button>
 
           {/* Theme Button */}
@@ -276,7 +296,7 @@ export const MenuPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Active-order sticky banner — shown when customer has a placed order */}
+       {/* Active-order sticky banner — shown when customer has a placed order */}
       {currentOrderId && (
         <div
           className="sticky top-[57px] z-30 bg-brand-emerald dark:bg-brand-amber px-4 py-2 flex items-center justify-between max-w-7xl mx-auto w-full"
@@ -346,43 +366,18 @@ export const MenuPage: React.FC = () => {
           })}
         </div>
 
-        {/* ── Today's Offers Strip ── */}
-        {couponsList.length > 0 && (
-          <div className="-mx-4 px-4 mb-2">
-            <div className="bg-gradient-to-r from-brand-emerald/5 via-brand-amber/5 to-brand-emerald/5 dark:from-brand-emerald/10 dark:via-brand-amber/10 dark:to-brand-emerald/10 border border-brand-amber/15 dark:border-brand-amber/20 rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Ticket size={12} className="text-brand-amber shrink-0" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-brand-amber">Today's Offers — Apply in Cart</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                {couponsList.map((c) => (
-                  <button
-                    key={c.code}
-                    onClick={() => {
-                      // Copy code to clipboard + open cart
-                      navigator.clipboard?.writeText(c.code).catch(() => {});
-                      setShowCart(true);
-                    }}
-                    title={`Tap to copy ${c.code} and open cart`}
-                    className="shrink-0 flex items-center gap-2 bg-white dark:bg-brand-dark-card border border-brand-emerald/20 dark:border-brand-amber/20 rounded-xl px-3 py-2 hover:border-brand-emerald dark:hover:border-brand-amber transition-all cursor-pointer group"
-                  >
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
-                      c.discountType === 'percentage'
-                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                    }`}>
-                      {c.discountType === 'percentage' ? `${c.value}% OFF` : `Rs.${c.value} OFF`}
-                    </span>
-                    <span className="font-mono font-black text-[10px] text-brand-emerald dark:text-brand-amber tracking-widest">
-                      {c.code}
-                    </span>
-                    <span className="text-[8px] text-slate-400 hidden group-hover:inline">tap to copy</span>
-                  </button>
-                ))}
-              </div>
+         {/* ── Buy 5 Get 1 Free Offer Banner ── */}
+        <div className="-mx-4 px-4 mb-3">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Tag size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Special Offer</span>
             </div>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Buy 5 cups of the same item and get 1 free. This applies to all items in the menu.
+            </p>
           </div>
-        )}
+        </div>
 
         {/* 2. Products Grid */}
         <div className="mt-6">
@@ -403,85 +398,92 @@ export const MenuPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
-                const isFavorite = favorites.includes(product.id);
-                return (
-                  <motion.div
-                    layout
-                    key={product.id}
-                    className={`bg-white dark:bg-brand-dark-card rounded-2xl overflow-hidden shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 flex flex-col justify-between group transition-all hover:shadow-md ${
-                      !product.available ? 'opacity-70' : ''
-                    }`}
-                  >
-                    <div className="relative aspect-square overflow-hidden bg-slate-100">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      
-                      {/* Veg / Non-Veg Tag */}
-                      <span className={`absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded-md text-white shadow-sm ${
-                        ['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg')
-                          ? 'bg-emerald-600'
-                          : 'bg-red-600'
-                      }`}>
-                        {['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg') ? 'VEG' : 'NON-VEG'}
-                      </span>
+<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+               {filteredProducts.map((product) => {
+                 const isFavorite = favorites.includes(product.id);
+                 return (
+                   <motion.div
+                     layout
+                     key={product.id}
+                     onClick={() => product.available && handleOpenCustomizations(product)}
+                     className={`relative bg-gradient-to-br from-[#174C3C] via-[#1a5c48] to-[#174C3C] rounded-[24px] overflow-hidden shadow-lg shadow-black/20 border border-white/10 flex flex-col justify-between group transition-all hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-1 cursor-pointer ${
+                       !product.available ? 'opacity-70 cursor-not-allowed' : ''
+                     }`}
+                   >
+                     {/* Decorative glow */}
+                     <div className="absolute inset-0 bg-gradient-to-br from-[#D4A055]/10 via-transparent to-[#FAF7F2]/5 pointer-events-none" />
 
-                      {/* Favorite Button */}
-                      <button
-                        onClick={() => toggleFavorite(product.id)}
-                        className="absolute top-3 right-3 p-2 rounded-full bg-white/80 dark:bg-brand-dark-bg/85 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 transition-all text-rose-500 cursor-pointer"
-                      >
-                        <Heart size={14} fill={isFavorite ? '#f43f5e' : 'none'} />
-                      </button>
+                     <div className="relative aspect-square overflow-hidden bg-slate-900">
+                       <img
+                         src={product.image}
+                         alt={product.name}
+                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                       />
 
-                      {/* Out of Stock Overlay */}
-                      {!product.available && (
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
-                          <span className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-md tracking-wider">
-                            Sold Out
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                       {/* Gradient overlay */}
+                       <div className="absolute inset-0 bg-gradient-to-t from-[#174C3C]/80 via-transparent to-transparent pointer-events-none" />
 
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                      <div>
-                        <h4 className="font-bold text-sm leading-tight text-slate-800 dark:text-slate-100 group-hover:text-brand-amber transition-colors line-clamp-1">
-                          {product.name}
-                        </h4>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 line-clamp-2 leading-relaxed font-normal">
-                          {product.description}
-                        </p>
-                      </div>
+                       {/* Veg / Non-Veg Tag */}
+                       <span className={`absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded-md text-white shadow-sm backdrop-blur-sm ${
+                         ['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg')
+                           ? 'bg-emerald-600/80'
+                           : 'bg-red-600/80'
+                       }`}>
+                         {['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg') ? 'VEG' : 'NON-VEG'}
+                       </span>
 
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="font-extrabold text-sm text-brand-emerald dark:text-brand-amber">
-                          Rs. {product.price}
-                        </span>
+                       {/* Favorite Button */}
+                       <button
+                         onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+                         className="absolute top-3 right-3 p-2 rounded-full bg-white/20 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 transition-all text-white cursor-pointer"
+                       >
+                         <Heart size={14} fill={isFavorite ? '#f43f5e' : 'none'} />
+                       </button>
 
-                        {product.available ? (
-                          <button
-                            onClick={() => handleOpenCustomizations(product)}
-                            className="bg-brand-emerald/10 dark:bg-brand-amber/15 text-brand-emerald dark:text-brand-amber hover:bg-brand-emerald hover:text-white dark:hover:bg-brand-amber dark:hover:text-brand-dark-bg font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-                          >
-                            <Plus size={12} className="stroke-[3]" />
-                            <span>Add</span>
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                            Unavailable
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+                       {/* Out of Stock Overlay */}
+                       {!product.available && (
+                         <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center">
+                           <span className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-md tracking-wider">
+                             Sold Out
+                           </span>
+                         </div>
+                       )}
+                     </div>
+
+                     <div className="relative p-4 flex-1 flex flex-col justify-between space-y-3">
+                       <div>
+                         <h4 className="font-bold text-sm leading-tight text-[#FAF7F2] group-hover:text-[#D4A055] transition-colors line-clamp-1">
+                           {product.name}
+                         </h4>
+                         <p className="text-[11px] text-white/50 dark:text-slate-500 mt-1 line-clamp-2 leading-relaxed font-normal">
+                           {product.description}
+                         </p>
+                       </div>
+
+                       <div className="flex justify-between items-center pt-2">
+                         <span className="font-extrabold text-sm text-[#D4A055]">
+                           Rs. {product.price}
+                         </span>
+
+                         {product.available ? (
+                           <button
+                             onClick={() => handleOpenCustomizations(product)}
+                             className="bg-[#D4A055]/20 hover:bg-[#D4A055] text-[#FAF7F2] hover:text-[#174C3C] font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-[#D4A055]/30"
+                           >
+                             <Plus size={12} className="stroke-[3]" />
+                             <span>Add</span>
+                           </button>
+                         ) : (
+                           <span className="text-[10px] font-semibold text-white/40 uppercase">
+                             Unavailable
+                           </span>
+                         )}
+                       </div>
+                     </div>
+                   </motion.div>
+                 );
+               })}
+             </div>
           )}
         </div>
       </main>
@@ -892,42 +894,23 @@ export const MenuPage: React.FC = () => {
                       );
                     })
                   )}
-                </div>
+                 </div>
 
-                {/* Cart pricing summary details & Coupon support */}
-                {cart.length > 0 && (
-                  <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
-                    {/* Coupon Form */}
+                  {cart.length > 0 && (
+                    <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
+                      {/* Coupon Form */}
                     {!activeCoupon ? (
-                      <>
-                        {/* Available codes hint */}
-                        {couponsList.length > 0 && (
-                          <div className="space-y-1.5">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                              <Ticket size={9} />
-                              Available Codes
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {couponsList.map((c) => (
-                                <button
-                                  key={c.code}
-                                  type="button"
-                                  onClick={() => setCouponInput(c.code)}
-                                  title={c.description || ''}
-                                  className="font-mono text-[9px] font-black tracking-widest text-brand-emerald dark:text-brand-amber bg-brand-emerald/8 dark:bg-brand-amber/10 border border-brand-emerald/20 dark:border-brand-amber/20 px-2 py-1 rounded-lg hover:bg-brand-emerald/15 dark:hover:bg-brand-amber/20 transition-colors cursor-pointer"
-                                >
-                                  {c.code} &mdash; {c.discountType === 'percentage' ? `${c.value}%` : `Rs.${c.value}`} off
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                      <div className="space-y-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                          <Tag size={9} />
+                          Promo Code
+                        </p>
                         <form onSubmit={handleApplyCoupon} className="flex gap-2">
                           <div className="relative flex-1">
                             <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                               type="text"
-                              placeholder="Enter Coupon Code"
+                              placeholder="Enter code"
                               value={couponInput}
                               onChange={(e) => setCouponInput(e.target.value)}
                               className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
@@ -940,7 +923,12 @@ export const MenuPage: React.FC = () => {
                             Apply
                           </button>
                         </form>
-                      </>
+                        {couponMessage && (
+                          <p className={`text-[10px] font-semibold px-1 ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {couponMessage.text}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
                         <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
@@ -959,30 +947,33 @@ export const MenuPage: React.FC = () => {
                       </div>
                     )}
 
-                    {couponMessage && (
-                      <p className={`text-[10px] font-semibold px-1 mt-[-6px] ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {couponMessage.text}
-                      </p>
-                    )}
-
-                    {/* Breakdown */}
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Items Subtotal:</span>
-                        <span>Rs. {cartSubtotal.toLocaleString()}</span>
-                      </div>
-                      {activeCoupon && (
-                        <div className="flex justify-between text-emerald-600 font-semibold">
-                          <span>Coupon Discount:</span>
-                          <span>-Rs. {discountAmount.toLocaleString()}</span>
+                      {/* Breakdown */}
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-400">
+                          <span>Items Subtotal:</span>
+                          <span>Rs. {cartSubtotal.toLocaleString()}</span>
                         </div>
-                      )}
-                      
-                      <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
-                        <span>Grand Total:</span>
-                        <span>Rs. {cartGrandTotal.toLocaleString()}</span>
+                         {cartPricing.offerDiscount > 0 && (
+                           <div className="flex justify-between text-amber-600 font-semibold">
+                             <span>Buy 5, Get 1 Free:</span>
+                             <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
+                           </div>
+                         )}
+                         {activeCoupon && (
+                           <div className="flex justify-between text-emerald-600 font-semibold">
+                             <span>Coupon Discount:</span>
+                             <span>-Rs. {couponDiscount.toLocaleString()}</span>
+                           </div>
+                         )}
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                          Buy 5 products of the same item and 1 product will be discounted.
+                        </div>
+
+                        <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
+                          <span>Grand Total:</span>
+                          <span>Rs. {cartGrandTotal.toLocaleString()}</span>
+                        </div>
                       </div>
-                    </div>
 
                     {/* Checkout Button */}
                     <button
@@ -1037,14 +1028,14 @@ export const MenuPage: React.FC = () => {
               <form onSubmit={handleCheckoutSubmit} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Your Name (For Order Ticket)
+                    Table Number
                   </label>
                   <input
                     type="text"
                     required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="E.g., Aarav Sharma"
+                    value={tableNumber}
+                    onChange={(e) => setTableNumber(e.target.value)}
+                    placeholder="E.g., 5"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/10 outline-none text-xs font-semibold dark:text-white"
                   />
                 </div>
@@ -1061,63 +1052,47 @@ export const MenuPage: React.FC = () => {
                     placeholder="E.g., Serve hot drinks first..."
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/10 outline-none text-xs font-semibold dark:text-white"
                   />
-                </div>
+                 </div>
 
-                {/* Payment Selection */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Select Payment Method
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('khalti')}
-                      className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        paymentMethod === 'khalti'
-                          ? 'border-[#5C2D91] bg-[#5C2D91]/10 shadow-lg shadow-[#5C2D91]/20'
-                          : 'border-slate-200 dark:border-brand-dark-border hover:border-[#5C2D91]/50 hover:bg-[#5C2D91]/5'
-                      }`}
-                    >
-                      <PaymentLogo provider="khalti" className="w-10 h-10" />
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        paymentMethod === 'khalti' ? 'text-[#5C2D91]' : 'text-slate-600 dark:text-slate-300'
-                      }`}>Khalti</span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Digital Wallet</span>
-                    </button>
+                  {/* Payment Selection */}
+                 <div className="space-y-2">
+                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                     Select Payment Method
+                   </label>
+                   <div className="grid grid-cols-2 gap-2">
+                     <button
+                       type="button"
+                       onClick={() => setPaymentMethod('khalti')}
+                       className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                         paymentMethod === 'khalti'
+                           ? 'border-[#5C2D91] bg-[#5C2D91]/10 shadow-lg shadow-[#5C2D91]/20'
+                           : 'border-slate-200 dark:border-brand-dark-border hover:border-[#5C2D91]/50 hover:bg-[#5C2D91]/5'
+                       }`}
+                     >
+                       <PaymentLogo provider="khalti" className="w-10 h-10" />
+                       <span className={`text-[10px] font-black uppercase tracking-wider ${
+                         paymentMethod === 'khalti' ? 'text-[#5C2D91]' : 'text-slate-600 dark:text-slate-300'
+                       }`}>Khalti</span>
+                       <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Digital Wallet</span>
+                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('esewa')}
-                      className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        paymentMethod === 'esewa'
-                          ? 'border-[#E85D04] bg-[#E85D04]/10 shadow-lg shadow-[#E85D04]/20'
-                          : 'border-slate-200 dark:border-brand-dark-border hover:border-[#E85D04]/50 hover:bg-[#E85D04]/5'
-                      }`}
-                    >
-                      <PaymentLogo provider="esewa" className="w-10 h-10" />
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        paymentMethod === 'esewa' ? 'text-[#E85D04]' : 'text-slate-600 dark:text-slate-300'
-                      }`}>Esewa</span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Digital Wallet</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('cash')}
-                      className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        paymentMethod === 'cash'
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 shadow-lg shadow-emerald-500/20'
-                          : 'border-slate-200 dark:border-brand-dark-border hover:border-emerald-500/50 hover:bg-emerald-50/50'
-                      }`}
-                    >
-                      <PaymentLogo provider="cash" className="w-10 h-10" />
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        paymentMethod === 'cash' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'
-                      }`}>Cash</span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Pay at Counter</span>
-                    </button>
-                  </div>
-                </div>
+                     <button
+                       type="button"
+                       onClick={() => setPaymentMethod('cash')}
+                       className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                         paymentMethod === 'cash'
+                           ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 shadow-lg shadow-emerald-500/20'
+                           : 'border-slate-200 dark:border-brand-dark-border hover:border-emerald-500/50 hover:bg-emerald-50/50'
+                       }`}
+                     >
+                       <PaymentLogo provider="cash" className="w-10 h-10" />
+                       <span className={`text-[10px] font-black uppercase tracking-wider ${
+                         paymentMethod === 'cash' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'
+                       }`}>Cash</span>
+                       <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Pay at Counter</span>
+                     </button>
+                   </div>
+                 </div>
 
                 <div className="p-3 bg-brand-emerald/8 text-brand-emerald dark:text-brand-mint border border-brand-emerald/15 dark:border-brand-mint/20 rounded-xl flex gap-2 items-center text-[10px]">
                   <HeartHandshake size={15} className="shrink-0" />
@@ -1140,24 +1115,31 @@ export const MenuPage: React.FC = () => {
       </AnimatePresence>
 
       {/* Payment Gateway Modal Simulation */}
-      {paymentMethod === 'khalti' || paymentMethod === 'esewa' ? (
+      {paymentMethod === 'khalti' ? (
         <PaymentModal
           isOpen={showPaymentGateway}
           onClose={() => setShowPaymentGateway(false)}
           onSuccess={handlePaymentSuccess}
           amount={cartGrandTotal}
           orderId={`CS-TEMP-${1000 + cart.length}`}
-          provider={paymentMethod as 'khalti' | 'esewa'}
+          provider="khalti"
         />
       ) : null}
 
-      {/* Table Selection & Switcher Modal */}
-      <TableSelectionModal
-        isOpen={showTableModal}
-        onClose={() => setShowTableModal(false)}
-      />
+        {/* Table Selection & Switcher Modal */}
+        <TableSelectionModal
+          isOpen={showTableModal}
+          onClose={() => setShowTableModal(false)}
+        />
 
-    </div>
+        {/* Group Tea Discount Celebration */}
+        <CelebrationModal
+          isOpen={celebrationActive}
+          onClose={dismissCelebration}
+          message={celebrationMessage}
+        />
+
+      </div>
   );
 };
 export default MenuPage;

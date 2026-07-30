@@ -1,3 +1,16 @@
+export interface PricingBreakdown {
+  subtotal: number;
+  offerDiscount: number;
+  couponDiscount: number;
+  total: number;
+  offerDetails: Array<{
+    itemId: string;
+    name: string;
+    freeUnits: number;
+    discount: number;
+  }>;
+}
+
 export interface CustomizationOption {
   name: string;
   price: number;
@@ -42,7 +55,7 @@ export interface CartItem {
 
 export type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'served' | 'completed' | 'rejected';
 
-export type PaymentMethod = 'khalti' | 'esewa' | 'cash';
+export type PaymentMethod = 'khalti' | 'cash';
 
 export interface PaymentDetails {
   method: PaymentMethod;
@@ -55,7 +68,7 @@ export interface PaymentDetails {
 export interface Order {
   id: string;
   tableNumber: string;
-  customerName: string;
+  customerName?: string;
   customerPhone?: string;
   items: CartItem[];
   subtotal: number;
@@ -77,10 +90,27 @@ export interface Order {
 
 export interface Coupon {
   code: string;
-  discountType: 'percentage' | 'fixed';
+  discountType: 'percentage' | 'fixed' | 'buyxgety';
   value: number;
   minOrder: number;
   description: string;
+  category?: string;
+  bogoBuy?: number;
+  bogoFree?: number;
+}
+
+export type ReviewStatus = 'pending' | 'submitted';
+
+export interface Review {
+  id: string;
+  orderId?: string;
+  tableNumber?: string;
+  name?: string;
+  rating: number;
+  comment: string;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SalesReport {
@@ -89,7 +119,6 @@ export interface SalesReport {
   averageOrderValue: number;
   revenueByPaymentMethod: {
     khalti: number;
-    esewa: number;
     cash: number;
   };
   revenueByCategory: Record<string, number>;
@@ -100,4 +129,14 @@ export interface SalesReport {
     quantity: number;
     revenue: number;
   }[];
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
 }

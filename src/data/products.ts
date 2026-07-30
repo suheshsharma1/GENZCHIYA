@@ -166,6 +166,52 @@ export const products: Product[] = [
     customizations: teaCustomizations,
     preparationTime: 3
   },
+  {
+    id: "tea-08",
+    name: "Matka Tea",
+    description: "Traditional desi chai slow-cooked in an authentic earthen clay matka pot. The clay imparts a rich, smoky, earthy flavour unlike any other. Infused with cardamom, cinnamon & fresh ginger — a nostalgic cup that connects you to Nepali chai culture.",
+    price: 60,
+    category: "tea",
+    image: "/images/products/Matka Tea.png",
+    available: true,
+    featured: true,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select" as const,
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "Less Sugar", price: 0 },
+          { name: "No Sugar", price: 0 },
+          { name: "Extra Sugar", price: 10 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select" as const,
+        options: [
+          { name: "Whole Milk (Classic)", price: 0 },
+          { name: "Buffalo Milk (Richer)", price: 20 },
+          { name: "Oat Milk", price: 20 },
+          { name: "Black / No Milk", price: 0 }
+        ]
+      },
+      {
+        name: "Matka Add-ons",
+        required: false,
+        type: "multiple" as const,
+        options: [
+          { name: "Extra Cardamom", price: 10 },
+          { name: "Saffron Touch", price: 30 },
+          { name: "Tulsi Leaves", price: 10 },
+          { name: "Ginger Boost", price: 10 }
+        ]
+      }
+    ],
+    preparationTime: 8
+  },
 
   // CATEGORY: COFFEE
   {
@@ -301,6 +347,61 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Mineral Water.jpg",
     available: true,
+    preparationTime: 1
+  },
+  {
+    id: "cold-13",
+    name: "Coca-Cola",
+    description: "Chilled Coca-Cola served cold.",
+    price: 80,
+    category: "cold-drinks",
+    image: "/images/products/Coca-Cola.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 1
+  },
+  {
+    id: "cold-14",
+    name: "Pepsi",
+    description: "Refreshing Pepsi served chilled.",
+    price: 80,
+    category: "cold-drinks",
+    image: "/images/products/Pepsi.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 1
+  },
+  {
+    id: "cold-15",
+    name: "Fanta",
+    description: "Orange-flavoured Fanta served cold.",
+    price: 80,
+    category: "cold-drinks",
+    image: "/images/products/Fanta.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 1
+  },
+  {
+    id: "cold-16",
+    name: "Sprite",
+    description: "Crisp lemon-lime Sprite served chilled.",
+    price: 80,
+    category: "cold-drinks",
+    image: "/images/products/Sprite.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
+    preparationTime: 1
+  },
+  {
+    id: "cold-17",
+    name: "Mountain Dew",
+    description: "Ice-cold Mountain Dew with a citrus flavour.",
+    price: 90,
+    category: "cold-drinks",
+    image: "/images/products/Mountain Dew.jpg",
+    available: true,
+    customizations: coldDrinkCustomizations,
     preparationTime: 1
   }
 ];

@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^5.4.0",
     "framer-motion": "^12.42.2",
     "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.24.0",
     "pdfkit": "^0.19.1",

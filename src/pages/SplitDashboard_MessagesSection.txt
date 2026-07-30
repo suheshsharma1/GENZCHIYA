@@ -1,0 +1,77 @@
+            {/* TAB: Messages */}
+            {cashierTab === 'messages' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquare size={14} />
+                    <span>Contact Messages</span>
+                    <span className="bg-brand-emerald/10 dark:bg-brand-amber/10 text-brand-emerald dark:text-brand-amber text-[9px] font-black px-2 py-0.5 rounded-full">
+                      {messages.length}
+                    </span>
+                  </h3>
+                </div>
+
+                {messages.length === 0 ? (
+                  <div className="bg-slate-50 dark:bg-brand-dark-bg/20 border border-dashed border-slate-200 dark:border-brand-dark-border/30 rounded-2xl p-14 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="p-4 bg-slate-100 dark:bg-brand-dark-border/20 rounded-2xl">
+                      <Mail size={28} className="text-slate-300 dark:text-slate-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500">No messages yet</p>
+                      <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5">Messages from customers will appear here.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                    {messages.map(msg => (
+                      <div
+                        key={msg.id}
+                        className={`bg-white dark:bg-brand-dark-card p-4 rounded-2xl border ${msg.read ? 'border-slate-200/50 dark:border-brand-dark-border/40' : 'border-brand-emerald/50 dark:border-brand-amber/50'} shadow-sm hover:border-brand-emerald/30 dark:hover:border-brand-amber/30 hover:shadow-md transition-all group`}
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${msg.read ? 'bg-slate-300' : 'bg-brand-emerald dark:bg-brand-amber'}`} />
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{msg.name}</span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500">{new Date(msg.createdAt).toLocaleString()}</span>
+                          </div>
+
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                            <p>Email: <span className="font-bold text-slate-700 dark:text-slate-200">{msg.email}</span></p>
+                            {msg.phone && <p>Phone: <span className="font-bold text-slate-700 dark:text-slate-200">{msg.phone}</span></p>}
+                          </div>
+
+                          <div className="bg-slate-50 dark:bg-brand-dark-bg/40 rounded-xl p-2.5">
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">{msg.message}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20 flex justify-end gap-2">
+                          {!msg.read && (
+                            <button
+                              onClick={() => markMessageAsRead(msg.id)}
+                              className="text-slate-300 hover:text-brand-emerald dark:text-slate-700 dark:hover:text-brand-amber p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              title="Mark as Read"
+                            >
+                              <Check size={13} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete message from ${msg.name}?`)) {
+                                deleteMessage(msg.id);
+                              }
+                            }}
+                            className="text-slate-300 hover:text-red-500 dark:text-slate-700 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                            title="Delete Message"
+                          >
+                            <Trash size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}

@@ -1,414 +1,224 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, Sparkles, Smartphone, LayoutDashboard, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import {
-  User, Monitor,
-  Sparkles, Layers, ArrowRight, X
-} from 'lucide-react';
-import { SVGLogo } from './SVGLogo';
-
-type RoleKey = 'customer' | 'cashier' | 'kitchen';
-
-type Panel = {
-  key: RoleKey;
-  label: string;
-  sublabel: string;
-  route: string;
-  icon: React.ElementType;
-  accentColor: string;
-  glowColor: string;
-  badgeGradient: string;
-  cardGradient: string;
-  ringColor: string;
-  description: string;
-};
-
-const PANELS: Panel[] = [
-  {
-    key: 'customer',
-    label: 'Customer',
-    sublabel: 'Menu & Order',
-    route: '/menu',
-    icon: User,
-    accentColor: '#10b981',
-    glowColor: 'rgba(16,185,129,0.35)',
-    badgeGradient: 'linear-gradient(135deg, #059669, #10b981)',
-    cardGradient: 'linear-gradient(145deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.06) 100%)',
-    ringColor: 'rgba(16,185,129,0.4)',
-    description: 'Browse menu, customize & place orders',
-  },
-  {
-    key: 'cashier',
-    label: 'Cashier & Kitchen',
-    sublabel: 'Dashboard',
-    route: '/admin',
-    icon: Monitor,
-    accentColor: '#8b5cf6',
-    glowColor: 'rgba(139,92,246,0.35)',
-    badgeGradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-    cardGradient: 'linear-gradient(145deg, rgba(139,92,246,0.12) 0%, rgba(124,58,237,0.06) 100%)',
-    ringColor: 'rgba(139,92,246,0.4)',
-    description: 'Manage orders, payments & history',
-  },
-];
-
-const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
-const BUBBLE = 60;
-const POS_KEY = 'gc_demo_switcher_pos';
-const DEFAULT_MARGIN_X = 18;
-const DEFAULT_MARGIN_BOTTOM = 96;
 
 export const DemoSwitcher: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const { userRole } = useApp();
-  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { setUserRole } = useApp();
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
-  const activePanel = PANELS.find(p => p.key === userRole) ?? PANELS[0];
-
-  // Draggable position (top-left of the bubble). Persisted across the page session + reload.
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const draggingRef = useRef(false);
-  const movedRef = useRef(false);
-  const offsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
-  const posRef = useRef<{ x: number; y: number } | null>(null);
-  useEffect(() => { posRef.current = pos; }, [pos]);
-
-  const defaultPos = useCallback(() => ({
-    x: clamp(window.innerWidth - BUBBLE - DEFAULT_MARGIN_X, 8, window.innerWidth - BUBBLE - 8),
-    y: clamp(window.innerHeight - BUBBLE - DEFAULT_MARGIN_BOTTOM, 8, window.innerHeight - BUBBLE - 8)
-  }), []);
-
-  // Load saved position (or default), then keep it in sync with the viewport.
-  useEffect(() => {
-    let initial = defaultPos();
-    try {
-      const saved = localStorage.getItem(POS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') initial = parsed;
-      }
-    } catch { /* ignore corrupt value */ }
-    setPos(initial);
-
-    const onResize = () => {
-      const cur = posRef.current ?? defaultPos();
-      setPos({
-        x: clamp(cur.x, 8, window.innerWidth - BUBBLE - 8),
-        y: clamp(cur.y, 8, window.innerHeight - BUBBLE - 8)
-      });
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [defaultPos]);
-
-  const persistPos = useCallback((p: { x: number; y: number }) => {
-    try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+  // Close on Escape key press
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
   }, []);
 
-  const switchTo = (panel: Panel) => {
-    localStorage.setItem('gc_user_role', panel.key);
-    setOpen(false);
-    let targetRoute = panel.route;
-    if (panel.key === 'customer') {
-      const savedTable = localStorage.getItem('gc_active_table');
-      targetRoute = savedTable ? `/menu?table=${savedTable}` : '/menu';
-    }
-    if (location.pathname + location.search !== targetRoute) {
-      navigate(targetRoute);
-    }
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (open) return; // don't drag while the panel is open
-    draggingRef.current = true;
-    movedRef.current = false;
-    const cur = posRef.current ?? defaultPos();
-    offsetRef.current = { dx: e.clientX - cur.x, dy: e.clientY - cur.y };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!draggingRef.current) return;
-    movedRef.current = true;
-    const next = {
-      x: clamp(e.clientX - offsetRef.current.dx, 8, window.innerWidth - BUBBLE - 8),
-      y: clamp(e.clientY - offsetRef.current.dy, 8, window.innerHeight - BUBBLE - 8)
-    };
-    setPos(next);
-  };
-
-  const onPointerUp = (e: React.PointerEvent) => {
-    const wasDragging = draggingRef.current;
-    draggingRef.current = false;
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
-    const cur = posRef.current;
-    if (cur) persistPos(cur);
-    // Suppress the click that follows a drag so the bubble doesn't toggle open
-    if (wasDragging && movedRef.current) {
-      e.stopPropagation();
-    }
-  };
-
-  const handleBubbleClick = () => {
-    if (movedRef.current) { movedRef.current = false; return; }
-    setOpen(prev => !prev);
-  };
-
-  // Collapse when clicking outside the expanded panel
   useEffect(() => {
-    if (!open) return;
-    const onDocPointerDown = (e: PointerEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-demo-switcher]')) return;
-      setOpen(false);
-    };
-    document.addEventListener('pointerdown', onDocPointerDown);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown);
-  }, [open]);
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      // Lock body scroll when modal is active
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
 
-  // Hide the switcher on staff/admin routes and the landing page
-  const HIDDEN_ROUTES = ['/', '/login', '/admin', '/kitchen', '/qr-tables'];
-  if (HIDDEN_ROUTES.some(r => location.pathname === r || location.pathname.startsWith(r + '/'))) {
-    return null;
-  }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, handleKeyDown]);
+
+  const handleSelectCustomer = () => {
+    try {
+      localStorage.setItem('gc_user_role', 'customer');
+      if (setUserRole) {
+        setUserRole('customer');
+      }
+    } catch (err) {
+      console.error('Failed to set customer role', err);
+    }
+    setIsOpen(false);
+    navigate('/menu');
+  };
+
+  const handleSelectStaff = () => {
+    try {
+      localStorage.setItem('gc_user_role', 'cashier');
+      if (setUserRole) {
+        setUserRole('cashier');
+      }
+    } catch (err) {
+      console.error('Failed to set cashier role', err);
+    }
+    setIsOpen(false);
+    navigate('/admin');
+  };
 
   return (
-    <div
-      data-demo-switcher
-      className="fixed z-[9999] select-none"
-      style={{ left: pos?.x ?? defaultPos().x, top: pos?.y ?? defaultPos().y }}
-    >
+    <>
+       {/* Floating Demo Switcher Trigger Button */}
+       <div ref={constraintsRef} className="fixed bottom-6 right-6 z-[9999]">
+         <motion.button
+           type="button"
+           onClick={() => setIsOpen(true)}
+           drag
+           dragConstraints={constraintsRef}
+           dragElastic={0.1}
+           dragMomentum={true}
+           initial={{ scale: 0.8, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           whileHover={{ scale: 1.05 }}
+           whileTap={{ scale: 0.95 }}
+           aria-label="Open Demo Mode Switcher"
+           className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-xl glass-light dark:glass-dark bg-white/90 dark:bg-brand-dark-card/90 border border-brand-emerald/20 dark:border-white/10 hover:border-brand-primary/40 dark:hover:border-brand-amber/40 text-brand-text dark:text-white transition-all cursor-pointer group"
+      >
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary dark:bg-brand-amber opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-primary dark:bg-brand-amber"></span>
+        </span>
+        <Sparkles className="w-4 h-4 text-brand-primary dark:text-brand-amber group-hover:rotate-12 transition-transform duration-300" />
+        <span className="text-xs font-black tracking-wider uppercase bg-gradient-to-r from-brand-primary via-brand-primary-dark to-brand-accent dark:from-brand-amber dark:to-brand-gold bg-clip-text text-transparent">
+          Demo Switcher
+        </span>
+       </motion.button>
+       </div>
+
+       {/* Modal Overlay & Card */}
       <AnimatePresence>
-        {open && (
-          <motion.div
-            key="panel"
-            initial={{ opacity: 0, scale: 0.88, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: 12 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-            className="absolute bottom-[76px] right-0 origin-bottom-right"
-            style={{ width: 268 }}
-          >
-            {/* Light frosted card */}
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.96)',
-                border: '1px solid rgba(0,0,0,0.07)',
-                borderRadius: 20,
-                boxShadow: '0 20px 60px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1)',
-                backdropFilter: 'blur(24px)',
-                overflow: 'hidden',
-              }}
+        {isOpen && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-black/65 backdrop-blur-md"
+              aria-hidden="true"
+            />
+
+            {/* Modal Dialog Content */}
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="demo-switcher-title"
+              initial={{ opacity: 0, scale: 0.9, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-3xl glass-light dark:glass-dark bg-white/95 dark:bg-brand-dark-card/95 border border-white/40 dark:border-brand-dark-border shadow-2xl rounded-3xl p-6 sm:p-8 z-10 overflow-hidden"
             >
-              {/* Header — soft gradient top */}
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, #f8f5ff 0%, #f0fdf8 100%)',
-                  borderBottom: '1px solid rgba(0,0,0,0.06)',
-                  padding: '13px 14px 11px',
-                }}
+              {/* Background Glow Accents */}
+              <div className="absolute -top-24 -right-24 w-60 h-60 bg-brand-primary/10 dark:bg-brand-amber/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-brand-accent/20 dark:bg-brand-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close modal"
+                className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer z-20"
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    <div
-                      style={{
-                        background: 'linear-gradient(135deg, #ede9fe, #d1fae5)',
-                        border: '1px solid rgba(139,92,246,0.15)',
-                        borderRadius: 10,
-                        padding: '5px 7px',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      <Sparkles size={11} style={{ color: '#8b5cf6' }} />
-                      <SVGLogo variant="icon" size={15} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', color: '#8b5cf6', textTransform: 'uppercase', lineHeight: 1 }}>Demo Mode</p>
-                      <p style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', letterSpacing: '-0.02em', lineHeight: 1.4, marginTop: 2 }}>GENZCHIYA POS</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setOpen(false)}
-                    title="Close"
-                    style={{
-                      width: 25, height: 25, borderRadius: 8,
-                      background: 'rgba(0,0,0,0.05)',
-                      border: '1px solid rgba(0,0,0,0.07)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', color: '#94a3b8',
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Modal Header */}
+              <div className="mb-6 sm:mb-8 text-center sm:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 dark:bg-brand-amber/10 border border-brand-primary/20 dark:border-brand-amber/30 text-brand-primary dark:text-brand-amber text-xs font-bold uppercase tracking-wider mb-3">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  GENZCHIYA Demo Experience
                 </div>
-                <div
-                  style={{
-                    marginTop: 9, padding: '5px 8px', borderRadius: 7,
-                    background: 'rgba(0,0,0,0.03)',
-                    border: '1px solid rgba(0,0,0,0.05)',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                  }}
+                <h2 id="demo-switcher-title" className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Choose Demo Mode
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Switch seamlessly between customer ordering and staff operational dashboards.
+                </p>
+              </div>
+
+              {/* Option Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                {/* Customer Mode Card */}
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col justify-between p-6 rounded-2xl bg-white dark:bg-brand-dark-bg/60 border border-slate-200/80 dark:border-brand-dark-border/80 hover:border-brand-primary/50 dark:hover:border-brand-amber/50 shadow-md hover:shadow-xl transition-all group"
                 >
-                  <Layers size={10} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                  <p style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>Switch perspective to explore the system</p>
-                </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-rose-50 dark:bg-brand-primary/10 text-brand-primary dark:text-brand-primary-light group-hover:scale-110 transition-transform">
+                        <Smartphone className="w-7 h-7" />
+                      </div>
+                      <span className="text-xl" role="img" aria-label="Customer phone">📱</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                      Customer Mode
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      Scan QR Code, browse the menu, customize your order, add items to the cart, place an order, and track your order.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSelectCustomer}
+                    className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
+                  >
+                    <span>Enter Customer Mode</span>
+                    <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
+                </motion.div>
+
+                {/* Staff / Cashier & Kitchen Mode Card */}
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col justify-between p-6 rounded-2xl bg-white dark:bg-brand-dark-bg/60 border border-slate-200/80 dark:border-brand-dark-border/80 hover:border-brand-amber/50 dark:hover:border-brand-amber/50 shadow-md hover:shadow-xl transition-all group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-amber-50 dark:bg-brand-amber/10 text-amber-600 dark:text-brand-amber group-hover:scale-110 transition-transform">
+                        <LayoutDashboard className="w-7 h-7" />
+                      </div>
+                      <span className="text-xl" role="img" aria-label="Cashier and kitchen">☕👨‍🍳</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                      Cashier &amp; Kitchen Mode
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      Manage customer orders, generate tokens, process payments, and monitor kitchen status in real time.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSelectStaff}
+                    className="w-full bg-slate-900 dark:bg-brand-amber hover:bg-slate-800 dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
+                  >
+                    <span>Enter Staff Dashboard</span>
+                    <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
+                  </motion.div>
               </div>
 
-              {/* Role Cards */}
-              <div style={{ padding: '10px 10px' }}>
-                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: '#cbd5e1', textTransform: 'uppercase', marginBottom: 7, paddingLeft: 3 }}>Choose a Role</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {PANELS.map((panel, i) => {
-                    const isActive = userRole === panel.key;
-                    const Icon = panel.icon;
-                    return (
-                      <motion.button
-                        key={panel.key}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05, type: 'spring', stiffness: 360, damping: 28 }}
-                        onClick={() => switchTo(panel)}
-                        whileHover={{ scale: 1.015 }}
-                        whileTap={{ scale: 0.97 }}
-                        style={{
-                          width: '100%',
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '10px 11px',
-                          borderRadius: 12,
-                          border: `1.5px solid ${isActive ? panel.ringColor : '#e9eef4'}`,
-                          background: isActive ? panel.cardGradient : '#f8fafc',
-                          cursor: 'pointer', textAlign: 'left',
-                          position: 'relative', overflow: 'hidden',
-                          boxShadow: isActive
-                            ? `0 4px 16px ${panel.glowColor}, inset 0 1px 0 rgba(255,255,255,0.8)`
-                            : '0 1px 3px rgba(0,0,0,0.05)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {/* Accent stripe */}
-                        {isActive && (
-                          <motion.div
-                            layoutId="active-stripe"
-                            style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0,
-                              width: 3, borderRadius: '3px 0 0 3px',
-                              background: panel.badgeGradient,
-                            }}
-                          />
-                        )}
-                        {/* Icon badge */}
-                        <div
-                          style={{
-                            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                            background: isActive ? panel.badgeGradient : '#fff',
-                            border: `1px solid ${isActive ? 'rgba(255,255,255,0.4)' : '#e2e8f0'}`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: isActive ? `0 4px 12px ${panel.glowColor}` : '0 1px 4px rgba(0,0,0,0.07)',
-                          }}
-                        >
-                          <Icon size={16} style={{ color: isActive ? '#fff' : panel.accentColor }} />
-                        </div>
-                        {/* Text */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', letterSpacing: '-0.01em', lineHeight: 1 }}>{panel.label}</p>
-                            {isActive && (
-                              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: panel.badgeGradient, color: '#fff', padding: '2px 5px', borderRadius: 99, lineHeight: 1.5 }}>Active</span>
-                            )}
-                          </div>
-                          <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, lineHeight: 1.3 }}>{panel.description}</p>
-                        </div>
-                        <ArrowRight size={13} style={{ color: isActive ? panel.accentColor : '#d1d5db', flexShrink: 0 }} />
-                      </motion.button>
-                    );
-                  })}
-                </div>
+              {/* Bottom Note */}
+              <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-brand-dark-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald dark:text-brand-amber" />
+                  Quick role simulation mode enabled
+                </span>
+                <span className="hidden sm:inline">Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-[10px] font-mono border border-slate-300 dark:border-white/10">Esc</kbd> to close</span>
               </div>
-
-              {/* Footer */}
-              <div style={{ padding: '7px 14px 11px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
-                <p style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.03em' }}>Switch Demo Role — Drag to reposition</p>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
-
-      {/* Floating Bubble */}
-      <motion.div
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onClick={handleBubbleClick}
-        whileTap={{ scale: 0.88 }}
-        className="touch-none cursor-grab active:cursor-grabbing"
-        style={{ width: BUBBLE, height: BUBBLE, position: 'relative' }}
-      >
-        {/* Soft glow ring */}
-        <motion.div
-          animate={{ scale: open ? 1.16 : [1, 1.08, 1] }}
-          transition={open ? { duration: 0.2 } : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute', inset: -4, borderRadius: '50%',
-            background: `radial-gradient(circle, ${activePanel.glowColor} 0%, transparent 70%)`,
-            opacity: 0.4,
-          }}
-        />
-        {/* Main bubble — white/light */}
-        <div
-          style={{
-            width: BUBBLE, height: BUBBLE, borderRadius: '50%',
-            background: 'linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%)',
-            border: `2px solid ${open ? activePanel.accentColor : '#e2e8f0'}`,
-            boxShadow: `0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)${open ? `, 0 0 18px ${activePanel.glowColor}` : ''}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative', overflow: 'hidden',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-          }}
-        >
-          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(255,255,255,0.95) 0%, transparent 60%)' }} />
-          <SVGLogo variant="icon" size={32} onClick={(e: React.MouseEvent) => e.stopPropagation()} />
-          {/* Role dot */}
-          <motion.div
-            animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute', top: 3, right: 3,
-              width: 11, height: 11, borderRadius: '50%',
-              background: activePanel.accentColor,
-              border: '2px solid #fff',
-              boxShadow: `0 0 6px ${activePanel.accentColor}`,
-            }}
-          />
-        </div>
-        {/* Role label badge */}
-        <AnimatePresence>
-          {!open && (
-            <motion.div
-              initial={{ opacity: 0, y: 4, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 4, scale: 0.8 }}
-              transition={{ delay: 0.1 }}
-              style={{
-                position: 'absolute', bottom: -7, left: '50%', transform: 'translateX(-50%)',
-                background: activePanel.badgeGradient,
-                borderRadius: 99, padding: '1px 6px',
-                fontSize: 8, fontWeight: 800, color: '#fff',
-                whiteSpace: 'nowrap',
-                boxShadow: `0 2px 6px ${activePanel.glowColor}`,
-                letterSpacing: '0.05em', textTransform: 'uppercase',
-                border: '1.5px solid rgba(255,255,255,0.7)',
-              }}
-            >
-              {activePanel.label}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+    </>
   );
 };
 

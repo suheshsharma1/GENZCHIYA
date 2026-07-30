@@ -88,12 +88,11 @@ public/
 
 ## Payment Methods — Configuration
 
-Payment is handled in `src/pages/MenuPage.tsx` and `src/components/PaymentModal.tsx`. The app supports three methods:
+Payment is handled in `src/pages/MenuPage.tsx` and `src/components/PaymentModal.tsx`. The app supports two methods:
 
 | Method | Key | Status |
 |--------|-----|--------|
 | Khalti | `khalti` | Simulated / needs live credentials |
-| eSewa | `esewa` | Simulated / needs live credentials |
 | Cash | `cash` | Always available |
 
 ### Environment Variables
@@ -109,9 +108,6 @@ cp .env.example .env.local
 | `VITE_KHALTI_MERCHANT_ID` | Public merchant identifier for Khalti |
 | `VITE_KHALTI_SECRET_KEY` | **Private** — used only in backend verification |
 | `VITE_KHALTI_VERIFY_URL` | Khalti verification endpoint |
-| `VITE_ESEWA_MERCHANT_ID` | Public merchant identifier for eSewa |
-| `VITE_ESEWA_SECRET_KEY` | **Private** — used only in backend verification |
-| `VITE_ESEWA_VERIFY_URL` | eSewa verification endpoint |
 
 > **Security:** `.env.local` is gitignored. Never expose secret keys in frontend code or commit them to Git. Secret keys should only be used in a backend/verification proxy.
 
@@ -121,10 +117,10 @@ cp .env.example .env.local
 
 ### Going Live
 
-1. **Register** for Khalti and eSewa merchant accounts (see [Payment Setup](#payment-setup) below).
+1. **Register** for a Khalti merchant account (see [Payment Setup](#payment-setup) below).
 2. **Add a backend** (Vercel Serverless Function, Express, etc.) that:
    - Receives the payment verification request from the frontend
-   - Calls the Khalti/eSewa verify endpoint with your **secret key** (server-side only)
+   - Calls the Khalti verify endpoint with your **secret key** (server-side only)
    - Returns success/failure to the frontend
 3. **Update `PaymentModal.tsx`** to call your backend verify endpoint instead of `setTimeout` simulation.
 4. **Wire the verification result** to `placeOrder` in `src/context/AppContext.tsx` — only mark `payment.status = 'success'` after server-side confirmation.
@@ -132,7 +128,6 @@ cp .env.example .env.local
 ### Merchant Registration
 
 - **Khalti:** `https://merchant.khalti.com` — register business, submit documents, wait approval (2–5 days).
-- **eSewa:** `https://merchant.esewa.com.np` — same process.
 
 After approval you receive **Merchant ID** and **Secret Key**. Put them in `.env.local`.
 
@@ -215,8 +210,6 @@ No `.env` is required for the demo. For production payments, add:
 ```
 KHALTI_MERCHANT_ID=
 KHALTI_SECRET_KEY=
-ESEWA_MERCHANT_ID=
-ESEWA_SECRET_KEY=
 ```
 
 ---

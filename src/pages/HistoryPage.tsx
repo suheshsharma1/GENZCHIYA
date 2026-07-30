@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserCircle, Heart, Clock, ChevronDown, UserCheck, IdCard, ReceiptText, Crown, PackageSearch } from 'lucide-react';
+import { ArrowLeft, UserCircle, Heart, ChevronDown, ReceiptText, Crown, PackageSearch, Star, Trash2, Edit3, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
+import { Review } from '../types';
 
 const TEA_CATEGORIES = ['tea'];
 const SNACK_CATEGORIES = ['cold-drinks'];
@@ -19,34 +20,25 @@ const STATUS_STYLES: Record<string, string> = {
 
 const PAYMENT_LABELS: Record<string, string> = {
   khalti: 'Khalti',
-  esewa: 'eSewa',
   cash: 'Cash',
+};
+
+const REVIEW_STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400',
+  submitted: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400',
 };
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { orders, orderHistory, products, favorites, activeTable, toggleFavorite } = useApp();
+  const { orders, orderHistory, products, favorites, activeTable, startNewSession, toggleFavorite, reviews, addReview, updateReview, deleteReview } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'profile'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'reviews'>('history');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'tea' | 'snacks'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [reviewSubmittingId, setReviewSubmittingId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
-  // Local state for profile editor
-  const [profileName, setProfileName] = useState(() => localStorage.getItem('gc_profile_name') || 'Guest Companion');
-  const [profilePhone, setProfilePhone] = useState(() => localStorage.getItem('gc_profile_phone') || '9821562664');
-  const [profileEmail, setProfileEmail] = useState(() => localStorage.getItem('gc_profile_email') || 'genzchiya@gmail.com');
-  const [editSuccess, setEditSuccess] = useState(false);
 
-  const handleProfileSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('gc_profile_name', profileName);
-    localStorage.setItem('gc_profile_phone', profilePhone);
-    localStorage.setItem('gc_profile_email', profileEmail);
-    setEditSuccess(true);
-    setTimeout(() => setEditSuccess(false), 3000);
-  };
-
-  // Order History combining orderHistory and orders (newest completed first)
   const combinedList = [...(orderHistory || []), ...(orders || [])];
   const uniqueMap = new Map<string, typeof combinedList[0]>();
   combinedList.forEach(o => {
@@ -56,9 +48,14 @@ export const HistoryPage: React.FC = () => {
   });
 
   const allCustomerOrders = Array.from(uniqueMap.values())
+    .filter(order => {
+      if (activeTable) {
+        return order.tableNumber === activeTable;
+      }
+      return true;
+    })
     .sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
 
-  // Apply Tea / Snacks category filter to history
   const customerOrders = allCustomerOrders.filter(order => {
     if (historyFilter === 'all') return true;
     if (historyFilter === 'tea') return order.items.some(item => TEA_CATEGORIES.includes(item.product.category));
@@ -66,13 +63,40 @@ export const HistoryPage: React.FC = () => {
     return true;
   });
 
-  // Map favorite product IDs to actual product objects
   const favoriteProducts = products.filter(p => favorites.includes(p.id));
+
+  const getReviewForOrder = (orderId: string) => reviews.find(r => r.orderId === orderId);
+
+  const handleReviewSubmit = (orderId: string, rating: number, comment: string) => {
+    const order = allCustomerOrders.find(o => o.id === orderId);
+    if (!order) return;
+    addReview({
+      orderId,
+      tableNumber: order.tableNumber,
+      rating,
+      comment,
+      status: 'submitted',
+    });
+    setReviewSubmittingId(null);
+  };
+
+  const handleReviewUpdate = (reviewId: string, rating: number, comment: string) => {
+    updateReview(reviewId, { rating, comment });
+    setEditingReviewId(null);
+  };
+
+  const handleReviewDelete = (reviewId: string) => {
+    if (window.confirm('Are you sure you want to delete this review?')) {
+      deleteReview(reviewId);
+    }
+  };
+
+  const completedOrders = allCustomerOrders.filter(o => ['completed', 'served'].includes(o.status));
 
   return (
     <div className="min-h-screen bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300 pb-20 text-slate-800 dark:text-slate-100">
       
-      {/* 1. Header */}
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-brand-cream/80 dark:bg-brand-dark-bg/85 backdrop-blur-md border-b border-brand-sage/5 dark:border-brand-dark-border/40 px-4 py-3 flex justify-between items-center max-w-xl mx-auto">
         <button 
           onClick={() => navigate(`/menu?table=${activeTable || '1'}`)}
@@ -87,20 +111,35 @@ export const HistoryPage: React.FC = () => {
       <main className="max-w-xl mx-auto px-4 mt-6 space-y-6">
         
         {/* Profile Card Header */}
-        <div className="bg-white dark:bg-brand-dark-card rounded-2xl p-5 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-brand-emerald/10 dark:bg-brand-amber/15 text-brand-emerald dark:text-brand-amber flex items-center justify-center">
-            <UserCircle size={30} />
+        <div className="bg-white dark:bg-brand-dark-card rounded-2xl p-5 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-brand-emerald/10 dark:bg-brand-amber/15 text-brand-emerald dark:text-brand-amber flex items-center justify-center shrink-0">
+              <UserCircle size={30} />
+            </div>
+            <div className="text-left space-y-1">
+              <h4 className="font-bold text-base text-slate-800 dark:text-white flex items-center gap-1.5">
+                <span>{activeTable ? `Table #${activeTable}` : 'Table Guest'}</span>
+                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-brand-amber/20 text-[9px] font-bold text-brand-amber border border-brand-amber/10">
+                  <Crown size={10} />
+                  Gold Tier
+                </span>
+              </h4>
+              <p className="text-xs text-slate-400 font-medium">Table Session: #{activeTable || 'None'}</p>
+            </div>
           </div>
-          <div className="text-left space-y-1">
-            <h4 className="font-bold text-base text-slate-800 dark:text-white flex items-center gap-1.5">
-              <span>{profileName}</span>
-              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-brand-amber/20 text-[9px] font-bold text-brand-amber border border-brand-amber/10">
-                <Crown size={10} />
-                Gold Tier
-              </span>
-            </h4>
-            <p className="text-xs text-slate-400 font-medium">Table Session: #{activeTable || 'None'}</p>
-          </div>
+
+          {activeTable && (
+            <button
+              onClick={() => {
+                startNewSession();
+                navigate('/');
+              }}
+              className="text-[10px] font-extrabold px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-all cursor-pointer shrink-0"
+              title="Clear table session for next guest"
+            >
+              New Session
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -117,6 +156,17 @@ export const HistoryPage: React.FC = () => {
             History ({customerOrders.length})
           </button>
           <button
+            onClick={() => setActiveTab('reviews')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              activeTab === 'reviews'
+                ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            <Star size={13} />
+            Reviews ({reviews.filter(r => r.tableNumber === activeTable || !activeTable).length})
+          </button>
+          <button
             onClick={() => setActiveTab('favorites')}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'favorites'
@@ -127,17 +177,6 @@ export const HistoryPage: React.FC = () => {
             <Heart size={13} />
             Favorites ({favoriteProducts.length})
           </button>
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              activeTab === 'profile'
-                ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-            }`}
-          >
-            <IdCard size={13} />
-            My Details
-          </button>
         </div>
 
         {/* Tab 1: Order History */}
@@ -147,8 +186,8 @@ export const HistoryPage: React.FC = () => {
             <div className="flex gap-2">
               {[
                 { key: 'all', label: 'All Orders' },
-                { key: 'tea', label: '🍵 Tea Only' },
-                { key: 'snacks', label: '🍟 Snacks Only' },
+                { key: 'tea', label: 'Tea Only' },
+                { key: 'snacks', label: 'Snacks Only' },
               ].map(({ key, label }) => (
                 <button
                   key={key}
@@ -176,6 +215,7 @@ export const HistoryPage: React.FC = () => {
                   (item.product.price + item.selectedCustomizations.reduce(
                     (cSum, cust) => cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
                   )) * item.quantity;
+                const review = getReviewForOrder(order.id);
 
                 return (
                   <div
@@ -190,9 +230,16 @@ export const HistoryPage: React.FC = () => {
                       <div className="text-left space-y-1.5 flex-1">
                         <div className="flex justify-between items-center">
                           <span className="text-[10px] font-bold text-slate-400 font-mono">Invoice: {order.id}</span>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_STYLES[order.status] || STATUS_STYLES.pending}`}>
-                            {order.status}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {review && (
+                              <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${REVIEW_STATUS_STYLES[review.status] || REVIEW_STATUS_STYLES.pending}`}>
+                                {review.status === 'submitted' ? 'Reviewed' : 'Pending Review'}
+                              </span>
+                            )}
+                            <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_STYLES[order.status] || STATUS_STYLES.pending}`}>
+                              {order.status}
+                            </span>
+                          </div>
                         </div>
                         
                         <div className="text-xs font-bold leading-tight line-clamp-1">
@@ -300,6 +347,64 @@ export const HistoryPage: React.FC = () => {
                             <span>Rs. {order.total.toLocaleString()}</span>
                           </div>
                         </div>
+
+                        {/* Review Section for completed orders */}
+                        {['completed', 'served'].includes(order.status) && (
+                          <div className="border-t border-slate-100 dark:border-brand-dark-border/40 pt-3">
+                            {review ? (
+                              <div className="bg-slate-50 dark:bg-brand-dark-bg/60 rounded-xl p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star key={star} size={14} fill={review.rating >= star ? '#f59e0b' : 'none'} className={review.rating >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'} />
+                                    ))}
+                                  </div>
+                                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${REVIEW_STATUS_STYLES[review.status]}`}>
+                                    {review.status}
+                                  </span>
+                                </div>
+                                {review.comment && (
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-300 italic">"{review.comment}"</p>
+                                )}
+                                {editingReviewId === review.id ? (
+                                  <ReviewEditForm
+                                    review={review}
+                                    onSave={(rating, comment) => handleReviewUpdate(review.id, rating, comment)}
+                                    onCancel={() => setEditingReviewId(null)}
+                                  />
+                                ) : (
+                                  <div className="flex gap-2 pt-1">
+                                    <button
+                                      onClick={() => setEditingReviewId(review.id)}
+                                      className="flex-1 bg-white dark:bg-brand-dark-card border border-slate-200 dark:border-brand-dark-border hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 text-[10px] font-bold py-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
+                                    >
+                                      <Edit3 size={10} /> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleReviewDelete(review.id)}
+                                      className="flex-1 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[10px] font-bold py-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
+                                    >
+                                      <Trash2 size={10} /> Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : reviewSubmittingId === order.id ? (
+                              <ReviewForm
+                                onSubmit={(rating, comment) => handleReviewSubmit(order.id, rating, comment)}
+                                onCancel={() => setReviewSubmittingId(null)}
+                              />
+                            ) : (
+                              <button
+                                onClick={() => setReviewSubmittingId(order.id)}
+                                className="w-full bg-brand-emerald/10 dark:bg-brand-amber/15 hover:bg-brand-emerald/20 dark:hover:bg-brand-amber/25 text-brand-emerald dark:text-brand-amber font-bold text-[11px] py-2.5 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                              >
+                                <Star size={14} />
+                                Rate Your Experience
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -309,7 +414,115 @@ export const HistoryPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: Favorites */}
+        {/* Tab 2: Reviews */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-4">
+            {/* Pending Reviews */}
+            {completedOrders.filter(o => !getReviewForOrder(o.id)).length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 text-left">Pending Review</h4>
+                {completedOrders.filter(o => !getReviewForOrder(o.id)).map(order => (
+                  <div key={`pending-${order.id}`} className="bg-white dark:bg-brand-dark-card rounded-2xl shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 overflow-hidden">
+                    <div className="p-4 flex justify-between items-center">
+                      <div className="text-left space-y-1 flex-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">Invoice: {order.id}</span>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${REVIEW_STATUS_STYLES.pending}`}>
+                            Pending Review
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {new Date(order.createdAt).toLocaleDateString()} · Table #{order.tableNumber} · Rs. {order.total}
+                        </p>
+                      </div>
+                      {reviewSubmittingId === order.id ? (
+                        <ReviewForm
+                          onSubmit={(rating, comment) => handleReviewSubmit(order.id, rating, comment)}
+                          onCancel={() => setReviewSubmittingId(null)}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setReviewSubmittingId(order.id)}
+                          className="bg-brand-emerald hover:bg-brand-sage text-white text-[10px] font-bold py-2 px-4 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Star size={12} /> Review
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Submitted Reviews */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 text-left">Your Reviews</h4>
+              {reviews.filter(r => !activeTable || r.tableNumber === activeTable).length === 0 ? (
+                <div className="text-center py-10 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/60">
+                  <Star className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={28} />
+                  <p className="text-slate-400 text-xs font-medium">No reviews yet. Complete an order to share your feedback!</p>
+                </div>
+              ) : (
+                reviews.filter(r => !activeTable || r.tableNumber === activeTable).map(review => (
+                  <div key={review.id} className="bg-white dark:bg-brand-dark-card rounded-2xl shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 overflow-hidden">
+                    {editingReviewId === review.id ? (
+                      <div className="p-4 space-y-3">
+                        <ReviewEditForm
+                          review={review}
+                          onSave={(rating, comment) => handleReviewUpdate(review.id, rating, comment)}
+                          onCancel={() => setEditingReviewId(null)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star key={star} size={16} fill={review.rating >= star ? '#f59e0b' : 'none'} className={review.rating >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'} />
+                              ))}
+                            </div>
+                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${REVIEW_STATUS_STYLES[review.status]}`}>
+                              {review.status}
+                            </span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => setEditingReviewId(review.id)}
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-brand-dark-bg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
+                              title="Edit review"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleReviewDelete(review.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-500 transition-colors cursor-pointer"
+                              title="Delete review"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                         <div className="text-[10px] text-slate-400 space-y-0.5">
+                           <p>Order: <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{review.orderId}</span></p>
+                           <p>Table: <span className="font-bold text-slate-600 dark:text-slate-300">#{review.tableNumber}</span></p>
+                           <p>Date: <span className="font-bold text-slate-600 dark:text-slate-300">{new Date(review.createdAt).toLocaleDateString()}</span></p>
+                         </div>
+                        {review.comment && (
+                          <div className="bg-slate-50 dark:bg-brand-dark-bg/40 rounded-xl p-3">
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 italic">"{review.comment}"</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Favorites */}
         {activeTab === 'favorites' && (
           <div className="space-y-3">
             {favoriteProducts.length === 0 ? (
@@ -353,60 +566,6 @@ export const HistoryPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Profile Editor */}
-        {activeTab === 'profile' && (
-          <form onSubmit={handleProfileSave} className="bg-white dark:bg-brand-dark-card rounded-2xl p-5 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 space-y-4">
-            <h4 className="text-sm font-extrabold uppercase tracking-wider text-slate-400 text-left">Update Profile</h4>
-            
-            {editSuccess && (
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-xs font-semibold flex items-center justify-center gap-1.5">
-                <UserCheck size={16} />
-                <span>Profile details saved locally!</span>
-              </div>
-            )}
-
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
-              <input
-                type="text"
-                required
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage outline-none text-xs font-semibold dark:text-white"
-              />
-            </div>
-
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile Number</label>
-              <input
-                type="tel"
-                required
-                value={profilePhone}
-                onChange={(e) => setProfilePhone(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage outline-none text-xs font-semibold dark:text-white"
-              />
-            </div>
-
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
-              <input
-                type="email"
-                required
-                value={profileEmail}
-                onChange={(e) => setProfileEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage outline-none text-xs font-semibold dark:text-white"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg hover:bg-brand-sage dark:hover:bg-brand-gold font-extrabold py-3 rounded-xl transition-all text-xs uppercase tracking-wider shadow cursor-pointer"
-            >
-              Save Changes
-            </button>
-          </form>
-        )}
-
       </main>
       
       {/* Footer Branding */}
@@ -418,4 +577,138 @@ export const HistoryPage: React.FC = () => {
     </div>
   );
 };
+
+interface ReviewFormProps {
+  onSubmit: (rating: number, comment: string) => void;
+  onCancel?: () => void;
+}
+
+const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel }) => {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating === 0) return;
+    onSubmit(rating, comment);
+    setRating(0);
+    setComment('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="flex justify-center gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRating(star)}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            className="p-0.5 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+          >
+            <Star 
+              size={22} 
+              fill={(hoverRating || rating) >= star ? '#f59e0b' : 'none'} 
+              className={(hoverRating || rating) >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}
+            />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Share your experience (optional)..."
+        className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl outline-none text-xs font-semibold focus:border-brand-sage resize-none"
+        rows={2}
+      />
+      <div className="flex gap-2">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 bg-slate-100 dark:bg-brand-dark-bg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 text-[10px] font-bold py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={rating === 0}
+          className="flex-1 bg-brand-emerald hover:bg-brand-sage disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[10px] py-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+        >
+          <Send size={12} />
+          Submit Review
+        </button>
+      </div>
+    </form>
+  );
+};
+
+interface ReviewEditFormProps {
+  review: Review;
+  onSave: (rating: number, comment: string) => void;
+  onCancel: () => void;
+}
+
+const ReviewEditForm: React.FC<ReviewEditFormProps> = ({ review, onSave, onCancel }) => {
+  const [rating, setRating] = useState(review.rating);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState(review.comment);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating === 0) return;
+    onSave(rating, comment);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="flex justify-center gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRating(star)}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            className="p-0.5 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+          >
+            <Star 
+              size={22} 
+              fill={(hoverRating || rating) >= star ? '#f59e0b' : 'none'} 
+              className={(hoverRating || rating) >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}
+            />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Share your experience (optional)..."
+        className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl outline-none text-xs font-semibold focus:border-brand-sage resize-none"
+        rows={2}
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-slate-100 dark:bg-brand-dark-bg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 text-[10px] font-bold py-2 rounded-xl transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={rating === 0}
+          className="flex-1 bg-brand-emerald hover:bg-brand-sage disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[10px] py-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+        >
+          <Send size={12} />
+          Update Review
+        </button>
+      </div>
+    </form>
+  );
+};
+
 export default HistoryPage;

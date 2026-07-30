@@ -128,13 +128,15 @@ const TableQRCard: React.FC<TableCardProps> = ({ tableNumber, baseUrl }) => {
   );
 };
 
+import { useApp } from '../context/AppContext';
+
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 const QRTablesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [tableCount, setTableCount] = useState(25);
+  const { totalTables, setTotalTables } = useApp();
   const baseUrl = window.location.origin;
 
-  const tables = Array.from({ length: tableCount }, (_, i) => String(i + 1));
+  const tables = Array.from({ length: totalTables }, (_, i) => String(i + 1));
 
   return (
     <>
@@ -178,17 +180,17 @@ const QRTablesPage: React.FC = () => {
               {/* Table count control */}
               <div className="flex items-center gap-1 border border-slate-200 dark:border-brand-dark-border rounded-xl overflow-hidden text-xs font-bold">
                 <button
-                  onClick={() => setTableCount(c => Math.max(1, c - 1))}
+                  onClick={() => setTotalTables(Math.max(1, totalTables - 1))}
                   className="px-2.5 py-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   title="Remove table"
                 >
                   <Minus size={12} />
                 </button>
                 <span className="px-2 text-brand-emerald dark:text-brand-amber tabular-nums min-w-[4ch] text-center">
-                  {tableCount}
+                  {totalTables}
                 </span>
                 <button
-                  onClick={() => setTableCount(c => Math.min(50, c + 1))}
+                  onClick={() => setTotalTables(Math.min(100, totalTables + 1))}
                   className="px-2.5 py-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   title="Add table"
                 >

@@ -10,7 +10,7 @@ import {
   TrendingDown, Plus, LogOut, RefreshCw, BarChart2, Coffee, 
   Layers, FileText, CheckCircle2, AlertCircle, Trash, Search, Upload, Edit2,
   Bell, LayoutGrid, List, ChefHat, Timer, BellRing, QrCode, Download, Minus, Clock,
-  Folder, FolderOpen, ChevronDown, ChevronRight, Ticket, Tag
+  Folder, FolderOpen, ChevronDown, ChevronRight, Ticket, Tag, Sparkles, Star
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useApp } from '../context/AppContext';
@@ -18,6 +18,8 @@ import { Order, Product } from '../types';
 import { ReceiptPDF } from '../components/ReceiptPDF';
 import { downloadReceiptPDF } from '../utils/pdf';
 import { SVGLogo } from '../components/SVGLogo';
+import { PaymentSummaryPanel } from '../components/PaymentSummaryPanel';
+import { TableCard } from '../components/TableCard';
 
 /* ─── Table QR Card Component (Local Helper) ──────────────────────────────── */
 interface TableCardProps {
@@ -129,11 +131,13 @@ const TableQRCard: React.FC<TableCardProps> = ({ tableNumber, baseUrl }) => {
 export const SplitDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { 
-    orders, orderHistory, products, categories, updateOrderStatus, toggleProductAvailability, 
+    orders, orderHistory, products, categories, reviews, updateOrderStatus, toggleProductAvailability, 
     updateProduct, updateProductImage, deleteProduct, deleteProducts, 
     addCategory, renameCategory, deleteCategory, moveProductsToCategory,
-    getSalesReport, resetAllData, logoutStaff,
-    couponsList, addCoupon, deleteCoupon
+    getSalesReport, clearPaymentHistory, logoutStaff,
+    couponsList, addCoupon, deleteCoupon, deleteReview,
+    totalTables, setTotalTables, getTableStatus, getTableOrderId, getTableOccupiedAt, getTableOrder, freeTable,
+    addProduct
   } = useApp();
 
   // Layout Preference State (Split Screen vs Cashier Focus vs Kitchen Focus)
@@ -146,7 +150,7 @@ export const SplitDashboard: React.FC = () => {
   });
 
   // Cashier Active Tab State
-  const [cashierTab, setCashierTab] = useState<'orders' | 'history' | 'menu' | 'reports' | 'qr' | 'promos'>('orders');
+  const [cashierTab, setCashierTab] = useState<'orders' | 'history' | 'payments' | 'menu' | 'reports' | 'qr' | 'promos' | 'reviews' | 'tables'>('orders');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'completed' | 'served' | 'rejected'>('all');
 
   // Promo code creator state
@@ -184,6 +188,7 @@ export const SplitDashboard: React.FC = () => {
   const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [showEditImageModal, setShowEditImageModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // Edit product form state
   const [editProductId, setEditProductId] = useState('');
@@ -194,6 +199,15 @@ export const SplitDashboard: React.FC = () => {
   const [editProdPrep, setEditProdPrep] = useState(5);
   const [editProductImage, setEditProductImage] = useState('');
   const [editProdBlobPreview, setEditProdBlobPreview] = useState('');
+
+  // Add product form state
+  const [newProdName, setNewProdName] = useState('');
+  const [newProdPrice, setNewProdPrice] = useState(0);
+  const [newProdCat, setNewProdCat] = useState('');
+  const [newProdDesc, setNewProdDesc] = useState('');
+  const [newProdPrep, setNewProdPrep] = useState(5);
+  const [newProdImage, setNewProdImage] = useState('');
+  const [newProdBlobPreview, setNewProdBlobPreview] = useState('');
 
   // Edit image form state
   const [editingProductId, setEditingProductId] = useState('');
@@ -234,7 +248,6 @@ export const SplitDashboard: React.FC = () => {
   };
 
   // Table QR count and base URL config states
-  const [tableCount, setTableCount] = useState(25);
   const [qrBaseUrl, setQrBaseUrl] = useState(() =>
     localStorage.getItem('gc_qr_base_url') || window.location.origin
   );
@@ -300,12 +313,11 @@ export const SplitDashboard: React.FC = () => {
   const paymentPieData = useMemo(() => {
     return [
       { name: 'Khalti', value: report.revenueByPaymentMethod.khalti },
-      { name: 'Esewa', value: report.revenueByPaymentMethod.esewa },
       { name: 'Cash', value: report.revenueByPaymentMethod.cash }
     ].filter(p => p.value > 0);
   }, [report]);
 
-  const COLORS = ['#5C2D91', '#2C5E43', '#D4A373'];
+  const COLORS = ['#5C2D91', '#059669'];
 
   // Search is applied per-category inside the folder rendering below.
 
@@ -402,10 +414,10 @@ export const SplitDashboard: React.FC = () => {
   const handleExportCSV = () => {
     const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'served');
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Invoice ID,Date,Table,Customer Name,Subtotal,Discount,Grand Total,Payment Method,Status\n";
+    csvContent += "Invoice ID,Date,Table,Subtotal,Discount,Grand Total,Payment Method,Status\n";
 
     completedOrders.forEach(o => {
-      csvContent += `${o.id},"${new Date(o.createdAt).toLocaleDateString()}",${o.tableNumber},"${o.customerName}",${o.subtotal},${o.discount},${o.total},${o.payment.method},${o.status}\n`;
+      csvContent += `${o.id},"${new Date(o.createdAt).toLocaleDateString()}",${o.tableNumber},${o.subtotal},${o.discount},${o.total},${o.payment.method},${o.status}\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -442,6 +454,26 @@ export const SplitDashboard: React.FC = () => {
     });
     setShowEditProductModal(false);
     setEditProductId('');
+  };
+
+  const handleAddProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProdName || !newProdPrice || !newProdCat) return;
+    addProduct({
+      name: newProdName,
+      price: Number(newProdPrice),
+      category: newProdCat,
+      description: newProdDesc,
+      preparationTime: Number(newProdPrep),
+      image: newProdImage
+    });
+    setShowAddProductModal(false);
+    setNewProdName('');
+    setNewProdPrice(0);
+    setNewProdDesc('');
+    setNewProdPrep(5);
+    setNewProdImage('');
+    setNewProdBlobPreview('');
   };
 
   const handleEditImage = (product: Product) => {
@@ -675,15 +707,6 @@ export const SplitDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Reset button */}
-          <button 
-            onClick={resetAllData}
-            className="p-2 border border-slate-200 dark:border-brand-dark-border hover:bg-slate-100 dark:hover:bg-brand-dark-bg rounded-xl transition-all cursor-pointer text-slate-400"
-            title="Reset System DB"
-          >
-            <RefreshCw size={14} />
-          </button>
-
           {/* Exit Portal */}
           <button
             onClick={handleLogout}
@@ -714,11 +737,12 @@ export const SplitDashboard: React.FC = () => {
               <div className="flex gap-1.5 bg-slate-100 dark:bg-brand-dark-bg p-1 rounded-xl border border-slate-200/40 dark:border-brand-dark-border/20">
                 {[
                   { key: 'orders', label: 'Live Queue' },
-                  { key: 'history', label: 'Order History' },
+                  { key: 'payments', label: 'Payments' },
                   { key: 'menu', label: 'Menu Editor' },
                   { key: 'reports', label: 'Sales Reports' },
                   { key: 'qr', label: 'Generate QR' },
-                  { key: 'promos', label: 'Promo Codes' }
+                  { key: 'tables', label: 'Table Mgmt' },
+                  { key: 'reviews', label: 'Reviews' },
                 ].map(tab => (
                   <button
                     key={tab.key}
@@ -752,6 +776,8 @@ export const SplitDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+
+
 
                 {/* Pending Confirmations Section */}
                 {pendingOrders.length > 0 && (
@@ -815,7 +841,6 @@ export const SplitDashboard: React.FC = () => {
                             </div>
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="text-xs font-extrabold">Table #{order.tableNumber}</h4>
-                              <span className="text-[9px] text-slate-400 font-semibold">{order.customerName}</span>
                             </div>
                             <div className="text-[11px] font-extrabold border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1">
                               {order.items.map((item, idx) => (
@@ -853,85 +878,9 @@ export const SplitDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: Order History */}
-            {cashierTab === 'history' && (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
-                  <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock size={14} />
-                    Order History ({orderHistory.length})
-                  </h3>
-                  <div className="flex gap-1 bg-slate-100 dark:bg-brand-dark-bg p-1 rounded-lg border border-slate-200/40 dark:border-brand-dark-border/20 overflow-x-auto">
-                    {[
-                      { key: 'all', label: 'All' },
-                      { key: 'completed', label: 'Completed' },
-                      { key: 'served', label: 'Served' },
-                      { key: 'rejected', label: 'Rejected' },
-                    ].map(f => (
-                      <button
-                        key={f.key}
-                        onClick={() => setHistoryFilter(f.key as any)}
-                        className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase transition-all cursor-pointer whitespace-nowrap ${
-                          historyFilter === f.key
-                            ? 'bg-white dark:bg-brand-dark-card text-brand-emerald dark:text-brand-amber shadow-sm'
-                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {(() => {
-                  const filtered = historyFilter === 'all'
-                    ? orderHistory
-                    : orderHistory.filter(o => o.status.toLowerCase() === historyFilter.toLowerCase());
-                  const sorted = [...filtered].sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
-                  return sorted.length === 0 ? (
-                    <div className="text-center py-16 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/40">
-                      <div className="p-4 bg-slate-100 dark:bg-brand-dark-border/20 rounded-2xl inline-block mb-2">
-                        <Clock size={28} className="text-slate-300 dark:text-slate-600" />
-                      </div>
-                      <p className="text-xs font-bold text-slate-400">No completed orders in history yet.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
-                      {sorted.map(order => (
-                        <div key={order.id} className="bg-white dark:bg-brand-dark-card rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 shadow-sm overflow-hidden text-left">
-                          <div className="p-3 flex items-center justify-between gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-mono font-bold text-slate-400">#{order.id}</span>
-                                <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                                  order.status === 'completed' || order.status === 'served' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400'
-                                  : order.status === 'rejected' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400'
-                                  : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
-                                }`}>
-                                  {order.status}
-                                </span>
-                                <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Table #{order.tableNumber}</span>
-                                {order.customerName && <span className="text-[9px] text-slate-400">({order.customerName})</span>}
-                              </div>
-                              <p className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 truncate">
-                                {order.items.map(i => `${i.product.name} x${i.quantity}`).join(', ')}
-                              </p>
-                              <p className="text-[9px] text-slate-400">
-                                Created: {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                {order.completedAt && (
-                                  <span> · Completed: {new Date(order.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                )}
-                                {' '}· {order.payment.method.toUpperCase()} ({order.payment.status.toUpperCase()})
-                              </p>
-                            </div>
-                            <span className="text-xs font-black text-brand-emerald dark:text-brand-amber shrink-0">Rs. {order.total.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
+            {/* TAB: Payment Summary */}
+            {cashierTab === 'payments' && (
+              <PaymentSummaryPanel orders={orders} orderHistory={orderHistory} onClearHistory={clearPaymentHistory} />
             )}
 
             {/* TAB 2: Menu Management */}
@@ -948,13 +897,31 @@ export const SplitDashboard: React.FC = () => {
                       className="w-full pl-9 pr-3 py-1.5 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs"
                     />
                   </div>
-                  <button
-                    onClick={() => { setNewCategoryName(''); setShowAddCategoryModal(true); }}
-                    className="flex items-center gap-1.5 bg-brand-emerald hover:bg-brand-sage text-white font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <Plus size={12} />
-                    <span>New Category</span>
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setNewCategoryName(''); setShowAddCategoryModal(true); }}
+                      className="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-brand-dark-card dark:hover:bg-brand-dark-bg text-slate-700 dark:text-slate-200 font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Plus size={12} />
+                      <span>New Category</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewProdName('');
+                        setNewProdPrice(0);
+                        setNewProdCat(categories[0] || '');
+                        setNewProdDesc('');
+                        setNewProdPrep(5);
+                        setNewProdImage('');
+                        setNewProdBlobPreview('');
+                        setShowAddProductModal(true);
+                      }}
+                      className="flex items-center gap-1.5 bg-brand-emerald hover:bg-brand-sage text-white font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Plus size={12} />
+                      <span>New Product</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Category folders */}
@@ -1178,9 +1145,9 @@ export const SplitDashboard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Table Count:</span>
                     <div className="flex items-center gap-1 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-[11px] font-bold bg-white dark:bg-brand-dark-card">
-                      <button onClick={() => setTableCount(c => Math.max(1, c - 1))} className="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"><Minus size={10} /></button>
-                      <span className="px-2 text-brand-emerald dark:text-brand-amber tabular-nums min-w-[3ch] text-center">{tableCount}</span>
-                      <button onClick={() => setTableCount(c => Math.min(50, c + 1))} className="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"><Plus size={10} /></button>
+                      <button onClick={() => setTotalTables(Math.max(1, totalTables - 1))} className="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"><Minus size={10} /></button>
+                      <span className="px-2 text-brand-emerald dark:text-brand-amber tabular-nums min-w-[3ch] text-center">{totalTables}</span>
+                      <button onClick={() => setTotalTables(Math.min(100, totalTables + 1))} className="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"><Plus size={10} /></button>
                     </div>
                   </div>
 
@@ -1203,9 +1170,51 @@ export const SplitDashboard: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[420px] overflow-y-auto pr-1">
-                  {Array.from({ length: tableCount }, (_, i) => String(i + 1)).map(t => (
+                  {Array.from({ length: totalTables }, (_, i) => String(i + 1)).map(t => (
                     <TableQRCard key={t} tableNumber={t} baseUrl={qrBaseUrl} />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: Table Management (Cashier) */}
+            {cashierTab === 'tables' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
+                    <LayoutGrid size={14} />
+                    Table Management
+                  </h3>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    {Array.from({ length: totalTables }, (_, i) => String(i + 1)).filter(t => getTableStatus(t) === 'occupied').length} of {totalTables} Occupied
+                  </span>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl px-4 py-3 flex items-center gap-3 text-[11px] text-amber-700 dark:text-amber-300">
+                  <span className="text-base">🔓</span>
+                  <span>Click <strong>Free Table</strong> on any occupied table to release it for new customers.</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {Array.from({ length: totalTables }, (_, i) => String(i + 1)).map(t => {
+                    const status = getTableStatus(t);
+                    const orderId = getTableOrderId(t);
+                    const occupiedAt = getTableOccupiedAt(t);
+                    const order = getTableOrder(t);
+                    return (
+                      <TableCard
+                        key={t}
+                        tableNumber={t}
+                        status={status}
+                        orderId={orderId}
+                        occupiedAt={occupiedAt}
+                        order={order}
+                        canFree={true}
+                        onViewOrder={() => { if (order) { navigate(`/tracking/${order.id}`); } }}
+                        onFreeTable={() => { freeTable(t); }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1380,6 +1389,89 @@ export const SplitDashboard: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* TAB: Reviews Management */}
+            {cashierTab === 'reviews' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-wider flex items-center gap-1.5">
+                    <Star size={14} />
+                    <span>Customer Reviews</span>
+                    <span className="bg-brand-emerald/10 dark:bg-brand-amber/10 text-brand-emerald dark:text-brand-amber text-[9px] font-black px-2 py-0.5 rounded-full">
+                      {reviews.length}
+                    </span>
+                  </h3>
+                </div>
+
+                {reviews.length === 0 ? (
+                  <div className="bg-slate-50 dark:bg-brand-dark-bg/20 border border-dashed border-slate-200 dark:border-brand-dark-border/30 rounded-2xl p-14 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="p-4 bg-slate-100 dark:bg-brand-dark-border/20 rounded-2xl">
+                      <Star size={28} className="text-slate-300 dark:text-slate-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500">No reviews yet</p>
+                      <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-0.5">Reviews will appear here after customers submit feedback.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
+                    {reviews.map(review => (
+                      <div
+                        key={review.id}
+                        className="bg-white dark:bg-brand-dark-card p-4 rounded-2xl border border-slate-200/50 dark:border-brand-dark-border/40 flex flex-col justify-between shadow-sm hover:border-brand-emerald/30 dark:hover:border-brand-amber/30 hover:shadow-md transition-all group"
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star key={star} size={14} fill={review.rating >= star ? '#f59e0b' : 'none'} className={review.rating >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'} />
+                              ))}
+                            </div>
+                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${review.status === 'submitted' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400'}`}>
+                              {review.status}
+                            </span>
+                          </div>
+
+                           <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                              {review.orderId && (
+                                <p>Order: <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{review.orderId}</span></p>
+                              )}
+                              {review.tableNumber && (
+                                <p>Table: <span className="font-bold text-slate-700 dark:text-slate-200">#{review.tableNumber}</span></p>
+                              )}
+                              {review.name && !review.orderId && (
+                                <p>Name: <span className="font-bold text-slate-700 dark:text-slate-200">{review.name}</span></p>
+                              )}
+                              <p>Date: <span className="font-bold text-slate-700 dark:text-slate-200">{new Date(review.createdAt).toLocaleDateString()}</span></p>
+                            </div>
+
+                           {review.comment && (
+                             <div className="bg-slate-50 dark:bg-brand-dark-bg/40 rounded-xl p-2.5">
+                               <p className="text-[11px] text-slate-600 dark:text-slate-300 italic line-clamp-2">"{review.comment}"</p>
+                             </div>
+                           )}
+                         </div>
+
+                         <div className="mt-3 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20 flex justify-end">
+                           <button
+                              onClick={() => {
+                                const reviewLabel = review.name || (review.tableNumber ? `Table #${review.tableNumber}` : review.orderId || 'Unknown');
+                                if (confirm(`Delete review from ${reviewLabel}?`)) {
+                                  deleteReview(review.id);
+                                }
+                              }}
+                            className="text-slate-300 hover:text-red-500 dark:text-slate-700 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                            title="Delete Review"
+                          >
+                            <Trash size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
@@ -1403,14 +1495,14 @@ export const SplitDashboard: React.FC = () => {
                 ].map(tab => (
                   <button
                     key={tab.key}
-                    onClick={() => setKitchenFilter(tab.key as any)}
+                    onClick={() => setCashierTab(tab.key as any)}
                     className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
-                      kitchenFilter === tab.key 
+                      cashierTab === tab.key 
                         ? 'bg-white dark:bg-brand-dark-card text-brand-emerald dark:text-brand-amber shadow-sm'
                         : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    {tab.label} ({tab.count})
+                    {tab.label}
                   </button>
                 ))}
               </div>
@@ -1637,6 +1729,95 @@ export const SplitDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Add Product Modal */}
+        {showAddProductModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddProductModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
+              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Add New Product</h4>
+              <form onSubmit={handleAddProductSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Name</label>
+                  <input type="text" required value={newProdName} onChange={(e) => setNewProdName(e.target.value)} placeholder="e.g. Masala Tea" className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Price (Rs.)</label>
+                    <input type="number" required min={1} value={newProdPrice || ''} onChange={(e) => setNewProdPrice(Number(e.target.value))} placeholder="150" className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Prep Time (mins)</label>
+                    <input type="number" required min={1} value={newProdPrep} onChange={(e) => setNewProdPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
+                  <select required value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none capitalize">
+                    <option value="" disabled>Select category…</option>
+                    {categories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Description</label>
+                  <input type="text" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} placeholder="Short description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Image Path</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="add-prod-image-path"
+                      type="text"
+                      value={newProdImage}
+                      onChange={(e) => { setNewProdImage(e.target.value); setNewProdBlobPreview(''); }}
+                      placeholder="/images/products/my-item.jpg"
+                      className="flex-1 px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none font-mono"
+                    />
+                    <label
+                      htmlFor="add-prod-file-pick"
+                      className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      <Upload size={12} /> Browse
+                          <input
+                            id="split-new-prod-file-pick"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setNewProdImage(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                                setNewProdBlobPreview(URL.createObjectURL(file));
+                              }
+                            }}
+                          />
+                    </label>
+                  </div>
+                  {(newProdBlobPreview || newProdImage) && (
+                    <div className="mt-1 w-full h-24 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
+                      <img
+                        src={newProdBlobPreview || newProdImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
+                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Add Product</button>
+                  <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
         {/* Edit Product Modal */}
         {showEditProductModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1691,13 +1872,17 @@ export const SplitDashboard: React.FC = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setEditProductImage(`/images/products/${file.name}`);
-                            setEditProdBlobPreview(URL.createObjectURL(file));
-                          }
-                        }}
+                         onChange={(e) => {
+                           const file = e.target.files?.[0];
+                           if (file) {
+                             const reader = new FileReader();
+                             reader.onloadend = () => {
+                               setEditProductImage(reader.result as string);
+                             };
+                             reader.readAsDataURL(file);
+                             setEditProdBlobPreview(URL.createObjectURL(file));
+                           }
+                         }}
                       />
                     </label>
                   </div>
@@ -1712,7 +1897,7 @@ export const SplitDashboard: React.FC = () => {
                     </div>
                   )}
                   <p className="text-[9px] text-slate-400">
-                    📂 Browse গरेपछि image <code className="font-mono bg-slate-100 dark:bg-brand-dark-bg px-1 rounded">public/images/products/</code> मा copy गर्नुस् — path automatically fill हुन्छ।
+                    📸 Browse गरेको image automatically base64 मा store हुन्छ — customer ले देख्न सक्छन्
                   </p>
                 </div>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
@@ -1753,13 +1938,17 @@ export const SplitDashboard: React.FC = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setEditImageURL(`/images/products/${file.name}`);
-                            setEditImageBlobPreview(URL.createObjectURL(file));
-                          }
-                        }}
+                         onChange={(e) => {
+                           const file = e.target.files?.[0];
+                           if (file) {
+                             const reader = new FileReader();
+                             reader.onloadend = () => {
+                               setEditImageURL(reader.result as string);
+                             };
+                             reader.readAsDataURL(file);
+                             setEditImageBlobPreview(URL.createObjectURL(file));
+                           }
+                         }}
                       />
                     </label>
                   </div>
@@ -1779,7 +1968,7 @@ export const SplitDashboard: React.FC = () => {
                     </div>
                   )}
                   <p className="text-[9px] text-slate-400">
-                    📂 Browse गरेपछि image <code className="font-mono bg-slate-100 dark:bg-brand-dark-bg px-1 rounded">public/images/products/</code> मा copy गर्नुस् — path automatically fill हुन्छ।
+                    📸 Browse गरेको image automatically base64 मा store हुन्छ — customer ले देख्न सक्छन्
                   </p>
                 </div>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">

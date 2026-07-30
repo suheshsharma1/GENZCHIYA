@@ -49,7 +49,7 @@ export const ReceiptPDF: React.FC<ReceiptPDFProps> = ({ order, elementId }) => {
           GENZCHIYA
         </h2>
         <p style={{ margin: '0 0 2px 0', fontSize: '10px' }}>SMART TEA CAFÉ</p>
-        <p style={{ margin: '0', fontSize: '9px' }}>Mid-Baneshwor, Kathmandu, Nepal</p>
+        <p style={{ margin: '0', fontSize: '9px' }}>Gwarko</p>
         <p style={{ margin: '0', fontSize: '9px' }}>Tel: +977-1-4455667 | PAN: 609876543</p>
       </div>
 
@@ -68,11 +68,7 @@ export const ReceiptPDF: React.FC<ReceiptPDFProps> = ({ order, elementId }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
           <span>Table No:</span>
-          <span style={{ fontWeight: 'bold' }}>{order.tableNumber === 'Takeaway' ? 'Takeaway' : `Table ${order.tableNumber}`}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-          <span>Customer:</span>
-          <span>{order.customerName}</span>
+          <span style={{ fontWeight: 'bold' }}>Table {order.tableNumber}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
           <span>Payment:</span>

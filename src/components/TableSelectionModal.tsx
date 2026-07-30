@@ -9,17 +9,17 @@ interface TableSelectionModalProps {
   onClose: () => void;
 }
 
-// Generate table numbers 1 to 50
-const ALL_TABLES = Array.from({ length: 50 }, (_, i) => String(i + 1));
-
 // Reserved tables list (can be customized)
-const RESERVED_TABLES = new Set(['13', '25', '40']);
+const RESERVED_TABLES = new Set(['13']);
 
 export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { activeTable, switchTable, orders, currentOrderId } = useApp();
+  const { activeTable, switchTable, orders, currentOrderId, totalTables, getTableStatus } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmTargetTable, setConfirmTargetTable] = useState<string | null>(null);
+
+  // Generate table numbers dynamically based on cashier/system totalTables setting
+  const ALL_TABLES = useMemo(() => Array.from({ length: totalTables }, (_, i) => String(i + 1)), [totalTables]);
 
   // Determine tables that currently have active (non-completed, non-served, non-rejected) orders
   const occupiedTables = useMemo(() => {
@@ -33,6 +33,14 @@ export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen
     });
     return activeSet;
   }, [orders]);
+
+  // Unified table status check (context-driven + fallback to orders)
+  const getEffectiveTableStatus = (tableNum: string): 'available' | 'occupied' => {
+    const contextStatus = getTableStatus(tableNum);
+    if (contextStatus === 'occupied') return 'occupied';
+    if (occupiedTables.has(tableNum)) return 'occupied';
+    return 'available';
+  };
 
   // Check if currently selected activeTable has an active order
   const currentTableHasActiveOrder = useMemo(() => {
@@ -176,49 +184,50 @@ export const TableSelectionModal: React.FC<TableSelectionModalProps> = ({ isOpen
               </div>
             </div>
 
-            {/* Table Grid */}
-            <div className="max-h-[300px] overflow-y-auto pr-1 grid grid-cols-4 sm:grid-cols-5 gap-2.5">
-              {filteredTables.map((tNum) => {
-                const isCurrent = tNum === activeTable;
-                const isOccupied = occupiedTables.has(tNum);
-                const isReserved = RESERVED_TABLES.has(tNum);
+             {/* Table Grid */}
+             <div className="max-h-[300px] overflow-y-auto pr-1 grid grid-cols-4 sm:grid-cols-5 gap-2.5">
+               {filteredTables.map((tNum) => {
+                 const isCurrent = tNum === activeTable;
+                 const effectiveStatus = getEffectiveTableStatus(tNum);
+                 const isOccupied = effectiveStatus === 'occupied';
+                 const isReserved = RESERVED_TABLES.has(tNum);
 
-                let badgeStyle = 'bg-white dark:bg-brand-dark-bg border-slate-200 dark:border-brand-dark-border text-slate-700 dark:text-slate-200 hover:border-brand-emerald hover:shadow-sm';
-                let statusLabel = 'Available';
-                let dotColor = 'bg-emerald-500';
+                 let badgeStyle = 'bg-white dark:bg-brand-dark-bg border-slate-200 dark:border-brand-dark-border text-slate-700 dark:text-slate-200 hover:border-brand-emerald hover:shadow-sm';
+                 let statusLabel = 'Available';
+                 let dotColor = 'bg-emerald-500';
 
-                if (isCurrent) {
-                  badgeStyle = 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg border-brand-emerald dark:border-brand-amber shadow-md ring-2 ring-brand-emerald/40 dark:ring-brand-amber/40 font-black';
-                  statusLabel = 'Current';
-                  dotColor = 'bg-white dark:bg-brand-dark-bg';
-                } else if (isReserved) {
-                  badgeStyle = 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 text-rose-400 dark:text-rose-500 cursor-not-allowed opacity-60';
-                  statusLabel = 'Reserved';
-                  dotColor = 'bg-rose-500';
-                } else if (isOccupied) {
-                  badgeStyle = 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 hover:border-amber-400';
-                  statusLabel = 'Occupied';
-                  dotColor = 'bg-amber-500';
-                }
+                 if (isCurrent) {
+                   badgeStyle = 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg border-brand-emerald dark:border-brand-amber shadow-md ring-2 ring-brand-emerald/40 dark:ring-brand-amber/40 font-black';
+                   statusLabel = 'Current';
+                   dotColor = 'bg-white dark:bg-brand-dark-bg';
+                 } else if (isReserved) {
+                   badgeStyle = 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 text-rose-400 dark:text-rose-500 cursor-not-allowed opacity-60';
+                   statusLabel = 'Reserved';
+                   dotColor = 'bg-rose-500';
+                 } else if (isOccupied) {
+                   badgeStyle = 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 hover:border-amber-400';
+                   statusLabel = 'Occupied';
+                   dotColor = 'bg-amber-500';
+                 }
 
-                return (
-                  <button
-                    key={tNum}
-                    onClick={() => handleTableClick(tNum)}
-                    disabled={isReserved}
-                    className={`relative flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer group ${badgeStyle}`}
-                  >
-                    {/* Status Dot */}
-                    <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${dotColor}`} />
+                 return (
+                   <button
+                     key={tNum}
+                     onClick={() => handleTableClick(tNum)}
+                     disabled={isReserved || isOccupied}
+                     className={`relative flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer group ${badgeStyle}`}
+                   >
+                     {/* Status Dot */}
+                     <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${dotColor}`} />
 
-                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
-                      Table
-                    </span>
-                    <span className="text-lg font-black leading-none mt-0.5">
-                      #{tNum}
-                    </span>
-                    <span className="text-[8px] font-semibold tracking-wide uppercase mt-1 opacity-80">
-                      {statusLabel}
+                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                       Table
+                     </span>
+                     <span className="text-lg font-black leading-none mt-0.5">
+                       #{tNum}
+                     </span>
+                     <span className="text-[8px] font-semibold tracking-wide uppercase mt-1 opacity-80">
+                       {statusLabel}
                     </span>
                   </button>
                 );

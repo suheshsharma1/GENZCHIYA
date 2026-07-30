@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Phone, Key, ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Lock, Phone, Key, ShieldCheck, CheckCircle2, Loader2, Wallet } from 'lucide-react';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -8,10 +8,11 @@ interface PaymentModalProps {
   onSuccess: (mobileNumber: string) => void;
   amount: number;
   orderId: string;
-  provider: 'khalti' | 'esewa';
+  provider: 'khalti';
 }
 
 type PaymentStep = 'credentials' | 'otp' | 'processing' | 'success';
+type PaymentMode = 'wallet' | 'qr';
 
 const PROVIDER_CONFIG = {
   khalti: {
@@ -24,21 +25,7 @@ const PROVIDER_CONFIG = {
     pinLabel: 'Khalti MPIN',
     placeholder: '98XXXXXXXX',
     pinPlaceholder: '••••',
-    successText: 'Paid via Khalti Wallet',
-    submitText: 'Pay',
-    processingText: 'Connecting to Wallet...',
-  },
-  esewa: {
-    color: '#E85D04',
-    colorDark: '#C24D03',
-    colorDarker: '#9C3D02',
-    name: 'esewa',
-    label: 'Wallet',
-    mobileLabel: 'Esewa Mobile Number',
-    pinLabel: 'Esewa PIN',
-    placeholder: '98XXXXXXXX',
-    pinPlaceholder: '••••',
-    successText: 'Paid via Esewa Wallet',
+    successText: 'Paid via Khalti',
     submitText: 'Pay',
     processingText: 'Connecting to Wallet...',
   }
@@ -48,7 +35,7 @@ const PROVIDER_CONFIG = {
  * LIVE PAYMENT INTEGRATION (backend required)
  *
  * This modal is currently a frontend simulation for demo purposes.
- * To connect real Khalti / eSewa payments:
+ * To connect real Khalti payments:
  *
  * 1. Add a backend endpoint (e.g. /api/verify-payment) that:
  *    - Receives: provider, amount, orderId, mobileNumber, transactionId
@@ -62,7 +49,6 @@ const PROVIDER_CONFIG = {
  *
  * 3. Environment variables (server-side / backend only):
  *    KHALTI_MERCHANT_ID, KHALTI_SECRET_KEY, KHALTI_VERIFY_URL
- *    ESEWA_MERCHANT_ID, ESEWA_SECRET_KEY, ESEWA_VERIFY_URL
  *
  * NEVER expose secret keys in frontend code or .env.local that is committed to Git.
  */
@@ -75,23 +61,32 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   provider
 }) => {
   const [step, setStep] = useState<PaymentStep>('credentials');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('wallet');
   const [mobileNumber, setMobileNumber] = useState('');
   const [mpin, setMpin] = useState('');
   const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+   const [error, setError] = useState('');
+   const [isSubmitting, setIsSubmitting] = useState(false);
+   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const config = PROVIDER_CONFIG[provider];
+
+  // QR payload — in real integration this would be a provider deep-link / payment URL
+  const qrPayload = `${config.name}://pay?amount=${amount * 100}&order_id=${orderId}&merchant=GENZCHIYA`;
 
   useEffect(() => {
     if (isOpen) {
       setStep('credentials');
+      setPaymentMode('wallet');
       setMobileNumber('');
       setMpin('');
       setOtp('');
       setError('');
       setIsSubmitting(false);
     }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, [isOpen]);
 
   const handleCredentialsSubmit = (e: React.FormEvent) => {
@@ -136,7 +131,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }, 2000);
   };
 
+  const handleModeSwitch = (mode: 'wallet') => {
+    setPaymentMode(mode);
+    setStep('credentials');
+    setError('');
+    setMobileNumber('');
+    setMpin('');
+    setOtp('');
+  };
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   if (!isOpen) return null;
+
+  const showTabs = step === 'credentials' || step === 'otp';
 
   return (
     <AnimatePresence>
@@ -155,15 +167,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl text-slate-800"
         >
+          {/* Header */}
           <div style={{ backgroundColor: config.color }} className="px-6 py-5 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-2xl font-black tracking-tight">{config.name}</span>
               <span className="text-[10px] uppercase font-bold tracking-widest border border-white/30 rounded px-1.5 py-0.5 bg-white/10">
-                {config.label}
+                {paymentMode === 'qr' ? 'QR Pay' : config.label}
               </span>
             </div>
             {step !== 'success' && step !== 'processing' && (
-              <button 
+              <button
                 onClick={onClose}
                 className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full"
               >
@@ -172,175 +185,199 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             )}
           </div>
 
+           {/* Payment Mode Tabs */}
+           {showTabs && (
+             <div className="flex border-b border-slate-100 bg-slate-50">
+               <div className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-[#5C2D91] border-b-2 border-[#5C2D91] bg-white">
+                 <Wallet size={15} />
+                 Wallet
+               </div>
+             </div>
+           )}
+
           <div className="p-6">
-            {step === 'credentials' && (
-              <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                <div className="text-center mb-2">
-                  <p className="text-sm text-slate-500">Order ID: <span className="font-semibold text-slate-700">{orderId}</span></p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">Rs. {amount.toLocaleString()}</h3>
-                </div>
+            <AnimatePresence mode="wait">
 
-                {error && (
-                  <div className="p-3 text-xs bg-red-50 text-red-600 rounded-lg border border-red-100">
-                    {error}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    {config.mobileLabel}
-                  </label>
-                  <div className="relative">
-                    <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="tel"
-                      value={mobileNumber}
-                      maxLength={10}
-                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder={config.placeholder}
-                      required
-                      disabled={isSubmitting}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    {config.pinLabel}
-                  </label>
-                  <div className="relative">
-                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="password"
-                      value={mpin}
-                      maxLength={4}
-                      onChange={(e) => setMpin(e.target.value.replace(/\D/g, ''))}
-                      placeholder={config.pinPlaceholder}
-                      required
-                      disabled={isSubmitting}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all text-sm tracking-widest"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  style={{ backgroundColor: config.color }}
-                  className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-75"
+              {/* ── WALLET: credentials ── */}
+              {paymentMode === 'wallet' && step === 'credentials' && (
+                <motion.form
+                  key="wallet-creds"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleCredentialsSubmit}
+                  className="space-y-4"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      {config.processingText}
-                    </>
-                  ) : (
-                    `${config.submitText} Rs. ${amount.toLocaleString()}`
+                  <div className="text-center mb-2">
+                    <p className="text-sm text-slate-500">Order ID: <span className="font-semibold text-slate-700">{orderId}</span></p>
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1">Rs. {amount.toLocaleString()}</h3>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 text-xs bg-red-50 text-red-600 rounded-lg border border-red-100">{error}</div>
                   )}
-                </button>
 
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-2">
-                  <ShieldCheck size={14} className="text-emerald-500" />
-                  <span>Secure 256-bit encrypted connection.</span>
-                </div>
-              </form>
-            )}
-
-            {step === 'otp' && (
-              <form onSubmit={handleOtpSubmit} className="space-y-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: `${config.color}15`, color: config.color }}>
-                    <Key size={22} />
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">{config.mobileLabel}</label>
+                    <div className="relative">
+                      <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="tel"
+                        value={mobileNumber}
+                        maxLength={10}
+                        onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                        placeholder={config.placeholder}
+                        required
+                        disabled={isSubmitting}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all text-sm"
+                      />
+                    </div>
                   </div>
-                  <h4 className="font-bold text-slate-800">Verification Code Sent</h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Enter the 6-digit confirmation code sent to <span className="font-semibold">{mobileNumber}</span>.
-                  </p>
-                </div>
 
-                {error && (
-                  <div className="p-3 text-xs bg-red-50 text-red-600 rounded-lg border border-red-100">
-                    {error}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">{config.pinLabel}</label>
+                    <div className="relative">
+                      <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="password"
+                        value={mpin}
+                        maxLength={4}
+                        onChange={(e) => setMpin(e.target.value.replace(/\D/g, ''))}
+                        placeholder={config.pinPlaceholder}
+                        required
+                        disabled={isSubmitting}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all text-sm tracking-widest"
+                      />
+                    </div>
                   </div>
-                )}
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block text-center">
-                    One Time Password (OTP)
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    maxLength={6}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="1 2 3 4 5 6"
-                    required
-                    autoFocus
+                  <button
+                    type="submit"
                     disabled={isSubmitting}
-                    className="w-full text-center tracking-widest text-lg font-bold py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center text-xs text-slate-400 px-1">
-                  <span>Didn't receive code?</span>
-                  <button 
-                    type="button" 
-                    onClick={() => { setOtp(''); setError(''); }}
-                    style={{ color: config.color }}
-                    className="font-bold hover:underline"
+                    style={{ backgroundColor: config.color }}
+                    className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-75"
                   >
-                    Resend Code
+                    {isSubmitting ? (
+                      <><Loader2 size={18} className="animate-spin" />{config.processingText}</>
+                    ) : (
+                      `${config.submitText} Rs. ${amount.toLocaleString()}`
+                    )}
                   </button>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  style={{ backgroundColor: config.color }}
-                  className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-75"
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-2">
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                    <span>Secure 256-bit encrypted connection.</span>
+                  </div>
+                </motion.form>
+              )}
+
+              {/* ── WALLET: OTP ── */}
+              {paymentMode === 'wallet' && step === 'otp' && (
+                <motion.form
+                  key="wallet-otp"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleOtpSubmit}
+                  className="space-y-4"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Verifying OTP...
-                    </>
-                  ) : (
-                    "Verify & Confirm Payment"
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: `${config.color}15`, color: config.color }}>
+                      <Key size={22} />
+                    </div>
+                    <h4 className="font-bold text-slate-800">Verification Code Sent</h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Enter the 6-digit confirmation code sent to <span className="font-semibold">{mobileNumber}</span>.
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 text-xs bg-red-50 text-red-600 rounded-lg border border-red-100">{error}</div>
                   )}
-                </button>
-              </form>
-            )}
 
-            {step === 'processing' && (
-              <div className="py-8 text-center space-y-4">
-                <Loader2 size={48} className="animate-spin mx-auto" style={{ color: config.color }} />
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg">Authorizing Transaction</h4>
-                  <p className="text-xs text-slate-400 mt-1">Please do not refresh the page or click close.</p>
-                </div>
-              </div>
-            )}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block text-center">One Time Password (OTP)</label>
+                    <input
+                      type="text"
+                      value={otp}
+                      maxLength={6}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="1 2 3 4 5 6"
+                      required
+                      autoFocus
+                      disabled={isSubmitting}
+                      className="w-full text-center tracking-widest text-lg font-bold py-3 rounded-xl border border-slate-200 focus:border-[#5C2D91] focus:ring-2 focus:ring-[#5C2D91]/20 outline-none transition-all"
+                    />
+                  </div>
 
-            {step === 'success' && (
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="py-6 text-center space-y-4"
-              >
-                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-500 border border-emerald-100">
-                  <CheckCircle2 size={40} className="stroke-[2.5]" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 text-xl">Payment Successful</h4>
-                  <p className="text-xs text-slate-500 mt-1">Paid Rs. {amount.toLocaleString()} {config.successText}</p>
-                </div>
-                <div className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 p-2.5 rounded-lg inline-block text-left">
-                  <p>Transaction ID: <span className="font-mono font-medium text-slate-700">TXN-{Math.floor(100000000 + Math.random() * 900000000)}</span></p>
-                  <p className="mt-0.5">Reference: <span className="font-medium text-slate-700">{orderId}</span></p>
-                </div>
-              </motion.div>
-            )}
+                  <div className="flex justify-between items-center text-xs text-slate-400 px-1">
+                    <span>Didn't receive code?</span>
+                    <button type="button" onClick={() => { setOtp(''); setError(''); }} style={{ color: config.color }} className="font-bold hover:underline">
+                      Resend Code
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    style={{ backgroundColor: config.color }}
+                    className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-75"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 size={18} className="animate-spin" />Verifying OTP...</>
+                    ) : (
+                      "Verify & Confirm Payment"
+                    )}
+                  </button>
+                </motion.form>
+              )}
+
+              {/* ── PROCESSING ── */}
+              {step === 'processing' && (
+                <motion.div
+                  key="processing"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-8 text-center space-y-4"
+                >
+                  <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                    <Loader2 size={48} className="animate-spin" style={{ color: config.color }} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-lg">Authorizing Transaction</h4>
+                    <p className="text-xs text-slate-400 mt-1">Please do not refresh the page or click close.</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── SUCCESS ── */}
+              {step === 'success' && (
+                <motion.div
+                  key="success"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="py-6 text-center space-y-4"
+                >
+                  <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-500 border border-emerald-100">
+                    <CheckCircle2 size={40} className="stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-xl">Payment Successful</h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                       Paid Rs. {amount.toLocaleString()} {config.successText}
+                       Wallet
+                    </p>
+                  </div>
+                   <div className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 p-2.5 rounded-lg inline-block text-left">
+                     <p>Transaction ID: <span className="font-mono font-medium text-slate-700">TXN-{Math.floor(100000000 + Math.random() * 900000000)}</span></p>
+                     <p className="mt-0.5">Reference: <span className="font-medium text-slate-700">{orderId}</span></p>
+                   </div>
+                </motion.div>
+              )}
+
+            </AnimatePresence>
           </div>
         </motion.div>
       </div>

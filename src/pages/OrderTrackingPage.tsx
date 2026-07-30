@@ -14,7 +14,7 @@ import { SVGLogo } from '../components/SVGLogo';
 export const OrderTrackingPage: React.FC = () => {
   const { orderId: routeOrderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { orders, orderHistory, currentOrderId, activeTable, updateOrderStatus } = useApp();
+  const { orders, orderHistory, currentOrderId, activeTable, updateOrderStatus, markCashAsPaid, addReview, reviews } = useApp();
 
   const targetId = routeOrderId || currentOrderId;
 
@@ -44,6 +44,9 @@ export const OrderTrackingPage: React.FC = () => {
   const [rating, setRating] = useState(0);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [commentInput, setCommentInput] = useState('');
+
+  const existingReview = order ? reviews.find(r => r.orderId === order.id) : null;
+  const hasExistingReview = !!existingReview;
 
   // Auto transition orders in mockup to simulate real-time kitchen behavior for portfolio showcase
   useEffect(() => {
@@ -94,6 +97,15 @@ export const OrderTrackingPage: React.FC = () => {
   const handleFeedbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) return;
+    addReview({
+      orderId: order.id,
+      tableNumber: order.tableNumber,
+      rating,
+      comment: commentInput.trim(),
+      status: 'submitted',
+    });
+    setRating(0);
+    setCommentInput('');
     setFeedbackSubmitted(true);
   };
 
@@ -147,7 +159,7 @@ export const OrderTrackingPage: React.FC = () => {
             {order.status === 'rejected' ? 'Order Cancelled' : 'Brewing in Progress'}
           </h3>
           <p className="text-xs text-slate-400">
-            Table Number: <span className="font-bold text-slate-700 dark:text-slate-200">#{order.tableNumber}</span> | Guest: <span className="font-semibold text-slate-700 dark:text-slate-200">{order.customerName}</span>
+            Table Number: <span className="font-bold text-slate-700 dark:text-slate-200">#{order.tableNumber}</span>
           </p>
 
           {/* Preparation Ticking Timer */}
@@ -417,10 +429,58 @@ export const OrderTrackingPage: React.FC = () => {
                 <span>Total Paid:</span>
                 <span>Rs. {order.total}</span>
               </div>
+               <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1">
+                 <span>Payment Method:</span>
+                   <span className="font-bold uppercase">{order.payment.method}</span>
+               </div>
+               <div className="flex justify-between">
+                 <span>Payment Status:</span>
+                   <span className={`font-bold uppercase ${order.payment.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                     {order.payment.status}
+                   </span>
+              </div>
             </div>
-        </div>
 
-        {/* 5. Rating & Feedback Module (Active if served / completed) */}
+            {/* Promo Banner Confirmation */}
+            {order.discount > 0 && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-brand-emerald via-brand-amber to-brand-emerald rounded-2xl text-center shadow-lg shadow-brand-emerald/20">
+                <p className="text-xs font-black text-white uppercase tracking-wider">
+                  🎉 Promo Offer Applied — Thank You for Ordering!
+                </p>
+                <p className="text-[10px] text-white/70 mt-1">
+                  Your discount has been applied
+                </p>
+              </div>
+            )}
+
+        {/* Cash Payment Confirmation */}
+        {order.payment.method === 'cash' && order.payment.status === 'pending' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-brand-dark-card rounded-2xl p-5 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 text-center space-y-3"
+          >
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto">
+              <Receipt size={20} />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-800 dark:text-white">Cash Payment</h4>
+              <p className="text-[11px] text-slate-400 mt-1">Please pay <span className="font-extrabold text-brand-emerald dark:text-brand-amber">Rs. {order.total.toLocaleString()}</span> at the counter.</p>
+            </div>
+            <button
+              onClick={() => markCashAsPaid(order.id)}
+              className="w-full bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg hover:bg-brand-sage dark:hover:bg-brand-gold font-extrabold py-3 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow cursor-pointer"
+            >
+              <CheckCircle2 size={16} />
+              <span>I Have Paid Cash</span>
+            </button>
+            <p className="text-[9px] text-slate-400">Tap to confirm payment and generate paid receipt.</p>
+          </motion.div>
+         )}
+
+         </div>
+
+         {/* 5. Rating & Feedback Module (Active if served / completed) */}
         {(order.status === 'ready' || order.status === 'served' || order.status === 'completed') && (
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
@@ -435,7 +495,30 @@ export const OrderTrackingPage: React.FC = () => {
               <p className="text-[11px] text-slate-400 mt-1">Rate your tea taste, service speed, and smart checkout.</p>
             </div>
 
-            {!feedbackSubmitted ? (
+            {hasExistingReview ? (
+              <div className="space-y-3">
+                <div className="flex justify-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} size={24} fill={existingReview!.rating >= star ? '#f59e0b' : 'none'} className={existingReview!.rating >= star ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'} />
+                  ))}
+                </div>
+                {existingReview!.comment && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">"{existingReview!.comment}"</p>
+                )}
+                <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${existingReview!.status === 'submitted' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'}`}>
+                  {existingReview!.status === 'submitted' ? 'Review Submitted' : 'Pending Review'}
+                </span>
+              </div>
+            ) : feedbackSubmitted ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={16} />
+                <span>Thank you! Your feedback has been recorded.</span>
+              </motion.div>
+            ) : (
               <form onSubmit={handleFeedbackSubmit} className="space-y-4">
                 {/* 5 Stars picker */}
                 <div className="flex justify-center gap-2">
@@ -480,24 +563,16 @@ export const OrderTrackingPage: React.FC = () => {
                   </motion.div>
                 )}
               </form>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-xs font-semibold flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={16} />
-                <span>Thank you! Your feedback has been recorded.</span>
-              </motion.div>
             )}
-          </motion.div>
-        )}
-      </main>
+           </motion.div>
+         )}
+       </main>
 
       {/* Hidden Receipt container for html2canvas to capture */}
-      <ReceiptPDF order={order} elementId="receipt-container" />
+       <ReceiptPDF order={order} elementId="receipt-container" />
 
-    </div>
+     </div>
   );
 };
+
 export default OrderTrackingPage;
