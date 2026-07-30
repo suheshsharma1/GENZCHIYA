@@ -891,6 +891,7 @@ interface TableStatusEntry {
       const serviceCharge = 0; // Math.round(subtotal * 0.10);
       const tax = 0; // Math.round(subtotal + serviceCharge) * 0.13);
 
+<<<<<<< HEAD
       const couponDiscount = activeCoupon ? (() => {
         if (activeCoupon.discountType === 'percentage') {
           return Math.round((subtotal * activeCoupon.value) / 100);
@@ -900,6 +901,14 @@ interface TableStatusEntry {
       const pricing = calculateCartPricing(cart, couponDiscount);
       const totalDiscount = pricing.offerDiscount + couponDiscount;
       const total = pricing.total;
+=======
+    const serviceCharge = 0; // Math.round(subtotal * 0.10);
+    const tax = 0; // Math.round((subtotal + serviceCharge) * 0.13);
+    const couponDiscount = calculateDiscount(subtotal, activeCoupon);
+    const pricing = calculateCartPricing(cart, couponDiscount);
+    const discount = pricing.offerDiscount + couponDiscount;
+    const total = pricing.total;
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
        const newOrder: Order = {
         id: `CS-${1000 + orders.length + 1}`,

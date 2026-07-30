@@ -12,7 +12,11 @@ import { SVGLogo } from '../components/SVGLogo';
 import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
+<<<<<<< HEAD
 import { CelebrationModal } from '../components/CelebrationModal';
+=======
+import { calculateCartPricing } from '../utils/pricing';
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -206,7 +210,12 @@ export const MenuPage: React.FC = () => {
     showAddToast(addedName, addedQty, totalCount);
   };
 
+<<<<<<< HEAD
    const basePricing = useMemo(() => calculateCartPricing(cart), [cart]);
+=======
+  // Calculate pricing breakdown
+  const basePricing = useMemo(() => calculateCartPricing(cart, 0), [cart]);
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
   const couponDiscount = useMemo(() => {
     if (!activeCoupon) return 0;
@@ -216,11 +225,19 @@ export const MenuPage: React.FC = () => {
     return activeCoupon.value;
   }, [activeCoupon, basePricing.subtotal]);
 
+<<<<<<< HEAD
    const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
 
    const cartSubtotal = cartPricing.subtotal;
    const discountAmount = cartPricing.offerDiscount + couponDiscount;
    const cartGrandTotal = cartPricing.total;
+=======
+  const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
+
+  const cartSubtotal = cartPricing.subtotal;
+  const discountAmount = cartPricing.offerDiscount + couponDiscount;
+  const cartGrandTotal = cartPricing.total;
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
   // Coupon Submission
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -366,11 +383,18 @@ export const MenuPage: React.FC = () => {
           })}
         </div>
 
+<<<<<<< HEAD
          {/* ── Buy 5 Get 1 Free Offer Banner ── */}
         <div className="-mx-4 px-4 mb-3">
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <Tag size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+=======
+        <div className="-mx-4 px-4 mb-3">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Ticket size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
               <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Special Offer</span>
             </div>
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
@@ -378,6 +402,10 @@ export const MenuPage: React.FC = () => {
             </p>
           </div>
         </div>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
         {/* 2. Products Grid */}
         <div className="mt-6">
@@ -896,6 +924,7 @@ export const MenuPage: React.FC = () => {
                   )}
                  </div>
 
+<<<<<<< HEAD
                   {cart.length > 0 && (
                     <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
                       {/* Coupon Form */}
@@ -973,6 +1002,31 @@ export const MenuPage: React.FC = () => {
                           <span>Grand Total:</span>
                           <span>Rs. {cartGrandTotal.toLocaleString()}</span>
                         </div>
+=======
+                {/* Cart pricing summary details */}
+                {cart.length > 0 && (
+                  <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
+                    {/* Breakdown */}
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Items Subtotal:</span>
+                        <span>Rs. {cartSubtotal.toLocaleString()}</span>
+                      </div>
+                      {cartPricing.offerDiscount > 0 && (
+                        <div className="flex justify-between text-amber-600 font-semibold">
+                          <span>Buy 5, Get 1 Free:</span>
+                          <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
+                        </div>
+                      )}
+
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                        Buy 5 products of the same item and 1 product will be discounted.
+                      </div>
+                      
+                      <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
+                        <span>Grand Total:</span>
+                        <span>Rs. {cartGrandTotal.toLocaleString()}</span>
+>>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                       </div>
 
                     {/* Checkout Button */}
