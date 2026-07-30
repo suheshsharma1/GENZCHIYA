@@ -924,13 +924,13 @@ const {
                     </button>
                     <button
                       onClick={() => {
-                        setNewProdName('');
-                        setNewProdPrice(0);
-                        setNewProdCat(categories[0] || '');
-                        setNewProdDesc('');
-                        setNewProdPrep(5);
-                        setNewProdImage('');
-                        setNewProdBlobPreview('');
+                        setNewProductName('');
+                        setNewProductPrice(0);
+                        setNewProductCategory(categories[0] || '');
+                        setNewProductDesc('');
+                        setNewProductPrep(5);
+                        setNewProductImage('');
+                        setNewProductBlobPreview('');
                         setShowAddProductModal(true);
                       }}
                       className="flex items-center gap-1.5 bg-brand-emerald hover:bg-brand-sage text-white font-bold text-[11px] py-1.5 px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap"
