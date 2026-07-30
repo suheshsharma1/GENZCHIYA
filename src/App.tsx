@@ -5,6 +5,17 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import PromoBanner from './components/PromoBanner';
 import DemoSwitcher from './components/DemoSwitcher';
 
+const AppErrorToast: React.FC = () => {
+  const { appError, clearAppError } = useApp();
+  if (!appError) return null;
+  return (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md">
+      <span className="text-sm font-semibold">{appError}</span>
+      <button onClick={clearAppError} className="text-white/80 hover:text-white text-lg leading-none">&times;</button>
+    </div>
+  );
+};
+
 // Pages
 import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
@@ -57,6 +68,7 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <ErrorBoundary>
+        <AppErrorToast />
         <PromoBannerRoute />
         <Routes>
         {/* Customer Facing Routes */}

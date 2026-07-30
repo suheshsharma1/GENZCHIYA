@@ -296,6 +296,7 @@ export const OrderTrackingPage: React.FC = () => {
                       src={item.product.image}
                       alt={item.product.name}
                       className="w-16 h-16 object-cover rounded-xl shadow-md border border-slate-100 dark:border-brand-dark-border/30"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                     {/* Quantity badge */}
                     <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-brand-emerald dark:bg-brand-amber text-white dark:text-brand-dark-bg text-[9px] font-black rounded-full flex items-center justify-center shadow">

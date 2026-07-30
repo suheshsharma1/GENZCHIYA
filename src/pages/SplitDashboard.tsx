@@ -130,19 +130,15 @@ const TableQRCard: React.FC<TableCardProps> = ({ tableNumber, baseUrl }) => {
 /* ─── Main Unified Page Component ─────────────────────────────────────────── */
 export const SplitDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { 
-<<<<<<< HEAD
-    orders, orderHistory, products, categories, reviews, updateOrderStatus, toggleProductAvailability, 
-    updateProduct, updateProductImage, deleteProduct, deleteProducts, 
-=======
-    orders, orderHistory, products, categories, updateOrderStatus, toggleProductAvailability, 
-    updateProduct, updateProductImage, deleteProduct, deleteProducts, addProduct,
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
+const { 
+    orders, orderHistory, products, categories, reviews, updateProductImage,
+    updateProduct, deleteProduct, deleteProducts, addProduct,
+    updateOrderStatus, toggleProductAvailability,
     addCategory, renameCategory, deleteCategory, moveProductsToCategory,
     getSalesReport, clearPaymentHistory, logoutStaff,
     couponsList, addCoupon, deleteCoupon, deleteReview,
     totalTables, setTotalTables, getTableStatus, getTableOrderId, getTableOccupiedAt, getTableOrder, freeTable,
-    addProduct
+    showAppError,
   } = useApp();
 
   // Layout Preference State (Split Screen vs Cashier Focus vs Kitchen Focus)
@@ -194,7 +190,6 @@ export const SplitDashboard: React.FC = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditImageModal, setShowEditImageModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // Edit product form state
   const [editProductId, setEditProductId] = useState('');
@@ -207,15 +202,6 @@ export const SplitDashboard: React.FC = () => {
   const [editProdBlobPreview, setEditProdBlobPreview] = useState('');
 
   // Add product form state
-<<<<<<< HEAD
-  const [newProdName, setNewProdName] = useState('');
-  const [newProdPrice, setNewProdPrice] = useState(0);
-  const [newProdCat, setNewProdCat] = useState('');
-  const [newProdDesc, setNewProdDesc] = useState('');
-  const [newProdPrep, setNewProdPrep] = useState(5);
-  const [newProdImage, setNewProdImage] = useState('');
-  const [newProdBlobPreview, setNewProdBlobPreview] = useState('');
-=======
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState(0);
   const [newProductCategory, setNewProductCategory] = useState('tea');
@@ -223,7 +209,6 @@ export const SplitDashboard: React.FC = () => {
   const [newProductPrep, setNewProductPrep] = useState(5);
   const [newProductImage, setNewProductImage] = useState('');
   const [newProductBlobPreview, setNewProductBlobPreview] = useState('');
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
   // Edit image form state
   const [editingProductId, setEditingProductId] = useState('');
@@ -506,26 +491,6 @@ export const SplitDashboard: React.FC = () => {
     });
     setShowEditProductModal(false);
     setEditProductId('');
-  };
-
-  const handleAddProductSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProdName || !newProdPrice || !newProdCat) return;
-    addProduct({
-      name: newProdName,
-      price: Number(newProdPrice),
-      category: newProdCat,
-      description: newProdDesc,
-      preparationTime: Number(newProdPrep),
-      image: newProdImage
-    });
-    setShowAddProductModal(false);
-    setNewProdName('');
-    setNewProdPrice(0);
-    setNewProdDesc('');
-    setNewProdPrep(5);
-    setNewProdImage('');
-    setNewProdBlobPreview('');
   };
 
   const handleEditImage = (product: Product) => {
@@ -1793,46 +1758,25 @@ export const SplitDashboard: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddProductModal(false)} />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-left border border-slate-100 dark:border-brand-dark-border/40 text-slate-800 dark:text-white">
-<<<<<<< HEAD
-              <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Add New Product</h4>
-              <form onSubmit={handleAddProductSubmit} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Product Name</label>
-                  <input type="text" required value={newProdName} onChange={(e) => setNewProdName(e.target.value)} placeholder="e.g. Masala Tea" className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-=======
               <h4 className="font-bold text-sm text-brand-emerald dark:text-brand-amber uppercase tracking-wider mb-4">Add Product</h4>
               <form onSubmit={handleAddProductSubmit} className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Product Name</label>
                   <input type="text" required value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-400 uppercase">Price (Rs.)</label>
-<<<<<<< HEAD
-                    <input type="number" required min={1} value={newProdPrice || ''} onChange={(e) => setNewProdPrice(Number(e.target.value))} placeholder="150" className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Prep Time (mins)</label>
-                    <input type="number" required min={1} value={newProdPrep} onChange={(e) => setNewProdPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-=======
                     <input type="number" required min="0" value={newProductPrice} onChange={(e) => setNewProductPrice(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-400 uppercase">Prep Time (mins)</label>
                     <input type="number" required min="1" value={newProductPrep} onChange={(e) => setNewProductPrep(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Category</label>
-<<<<<<< HEAD
-                  <select required value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none capitalize">
-                    <option value="" disabled>Select category…</option>
-=======
                   <select value={newProductCategory} onChange={(e) => setNewProductCategory(e.target.value)} className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none capitalize">
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                     {categories.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
@@ -1840,60 +1784,20 @@ export const SplitDashboard: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Description</label>
-<<<<<<< HEAD
-                  <input type="text" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} placeholder="Short description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
-=======
                   <input type="text" value={newProductDesc} onChange={(e) => setNewProductDesc(e.target.value)} placeholder="Description of item..." className="w-full px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none" />
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase">Image Path</label>
                   <div className="flex gap-2">
                     <input
-<<<<<<< HEAD
-                      id="add-prod-image-path"
-                      type="text"
-                      value={newProdImage}
-                      onChange={(e) => { setNewProdImage(e.target.value); setNewProdBlobPreview(''); }}
-=======
                       id="split-add-prod-image-path"
                       type="text"
                       value={newProductImage}
                       onChange={(e) => { setNewProductImage(e.target.value); setNewProductBlobPreview(''); }}
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                       placeholder="/images/products/my-item.jpg"
                       className="flex-1 px-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg rounded-xl text-xs outline-none font-mono"
                     />
                     <label
-<<<<<<< HEAD
-                      htmlFor="add-prod-file-pick"
-                      className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
-                    >
-                      <Upload size={12} /> Browse
-                          <input
-                            id="split-new-prod-file-pick"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setNewProdImage(reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                                setNewProdBlobPreview(URL.createObjectURL(file));
-                              }
-                            }}
-                          />
-                    </label>
-                  </div>
-                  {(newProdBlobPreview || newProdImage) && (
-                    <div className="mt-1 w-full h-24 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
-                      <img
-                        src={newProdBlobPreview || newProdImage}
-=======
                       htmlFor="split-add-prod-file-pick"
                       className="flex items-center gap-1 px-3 py-2 bg-brand-emerald hover:bg-brand-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
                     >
@@ -1917,20 +1821,15 @@ export const SplitDashboard: React.FC = () => {
                     <div className="mt-1 w-full h-24 rounded-xl overflow-hidden border border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg">
                       <img
                         src={newProductBlobPreview || newProductImage}
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                         alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; showAppError('Failed to load image preview.'); }}
                       />
                     </div>
                   )}
                 </div>
                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-brand-dark-border/20">
-<<<<<<< HEAD
                   <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Add Product</button>
-=======
-                  <button type="submit" className="flex-1 bg-brand-emerald hover:bg-brand-sage text-white font-bold py-2 rounded-xl text-xs cursor-pointer">Add Item</button>
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
                   <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 bg-slate-100 dark:bg-brand-dark-bg text-slate-500 py-2 rounded-xl text-xs cursor-pointer">Cancel</button>
                 </div>
               </form>
@@ -1992,17 +1891,20 @@ export const SplitDashboard: React.FC = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                         onChange={(e) => {
-                           const file = e.target.files?.[0];
-                           if (file) {
-                             const reader = new FileReader();
-                             reader.onloadend = () => {
-                               setEditProductImage(reader.result as string);
-                             };
-                             reader.readAsDataURL(file);
-                             setEditProdBlobPreview(URL.createObjectURL(file));
-                           }
-                         }}
+onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setEditProductImage(reader.result as string);
+                              };
+                              reader.onerror = () => {
+                                showAppError('Cannot read image file. The model does not support image input.');
+                              };
+                              reader.readAsDataURL(file);
+                              setEditProdBlobPreview(URL.createObjectURL(file));
+                            }
+                          }}
                       />
                     </label>
                   </div>
@@ -2012,7 +1914,7 @@ export const SplitDashboard: React.FC = () => {
                         src={editProdBlobPreview || editProductImage}
                         alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; showAppError('Failed to load image preview.'); }}
                       />
                     </div>
                   )}
@@ -2058,17 +1960,20 @@ export const SplitDashboard: React.FC = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                         onChange={(e) => {
-                           const file = e.target.files?.[0];
-                           if (file) {
-                             const reader = new FileReader();
-                             reader.onloadend = () => {
-                               setEditImageURL(reader.result as string);
-                             };
-                             reader.readAsDataURL(file);
-                             setEditImageBlobPreview(URL.createObjectURL(file));
-                           }
-                         }}
+onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setEditImageURL(reader.result as string);
+                              };
+                              reader.onerror = () => {
+                                showAppError('Cannot read image file. The model does not support image input.');
+                              };
+                              reader.readAsDataURL(file);
+                              setEditImageBlobPreview(URL.createObjectURL(file));
+                            }
+                          }}
                       />
                     </label>
                   </div>
@@ -2078,7 +1983,7 @@ export const SplitDashboard: React.FC = () => {
                         src={editImageBlobPreview || editImageURL}
                         alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; showAppError('Failed to load image preview.'); }}
                       />
                     </div>
                   ) : (

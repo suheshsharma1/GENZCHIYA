@@ -12,11 +12,7 @@ import { SVGLogo } from '../components/SVGLogo';
 import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
-<<<<<<< HEAD
 import { CelebrationModal } from '../components/CelebrationModal';
-=======
-import { calculateCartPricing } from '../utils/pricing';
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -210,12 +206,8 @@ export const MenuPage: React.FC = () => {
     showAddToast(addedName, addedQty, totalCount);
   };
 
-<<<<<<< HEAD
-   const basePricing = useMemo(() => calculateCartPricing(cart), [cart]);
-=======
   // Calculate pricing breakdown
   const basePricing = useMemo(() => calculateCartPricing(cart, 0), [cart]);
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
   const couponDiscount = useMemo(() => {
     if (!activeCoupon) return 0;
@@ -225,19 +217,12 @@ export const MenuPage: React.FC = () => {
     return activeCoupon.value;
   }, [activeCoupon, basePricing.subtotal]);
 
-<<<<<<< HEAD
-   const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
-
-   const cartSubtotal = cartPricing.subtotal;
-   const discountAmount = cartPricing.offerDiscount + couponDiscount;
-   const cartGrandTotal = cartPricing.total;
-=======
+  // Calculate pricing breakdown
   const cartPricing = useMemo(() => calculateCartPricing(cart, couponDiscount), [cart, couponDiscount]);
 
   const cartSubtotal = cartPricing.subtotal;
   const discountAmount = cartPricing.offerDiscount + couponDiscount;
   const cartGrandTotal = cartPricing.total;
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
   // Coupon Submission
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -383,18 +368,10 @@ export const MenuPage: React.FC = () => {
           })}
         </div>
 
-<<<<<<< HEAD
-         {/* ── Buy 5 Get 1 Free Offer Banner ── */}
-        <div className="-mx-4 px-4 mb-3">
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Tag size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
-=======
         <div className="-mx-4 px-4 mb-3">
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <Ticket size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
               <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Special Offer</span>
             </div>
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
@@ -402,10 +379,6 @@ export const MenuPage: React.FC = () => {
             </p>
           </div>
         </div>
-<<<<<<< HEAD
-=======
-
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
         {/* 2. Products Grid */}
         <div className="mt-6">
@@ -441,12 +414,15 @@ export const MenuPage: React.FC = () => {
                      {/* Decorative glow */}
                      <div className="absolute inset-0 bg-gradient-to-br from-[#D4A055]/10 via-transparent to-[#FAF7F2]/5 pointer-events-none" />
 
-                     <div className="relative aspect-square overflow-hidden bg-slate-900">
-                       <img
-                         src={product.image}
-                         alt={product.name}
-                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                       />
+                      <div className="relative aspect-square overflow-hidden bg-slate-900">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
 
                        {/* Gradient overlay */}
                        <div className="absolute inset-0 bg-gradient-to-t from-[#174C3C]/80 via-transparent to-transparent pointer-events-none" />
@@ -554,7 +530,7 @@ export const MenuPage: React.FC = () => {
                   return (
                     <div key={item.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
-                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
@@ -858,7 +834,7 @@ export const MenuPage: React.FC = () => {
                         >
                           {/* Product image */}
                           <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
-                            <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                            <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -924,109 +900,83 @@ export const MenuPage: React.FC = () => {
                   )}
                  </div>
 
-<<<<<<< HEAD
-                  {cart.length > 0 && (
-                    <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
-                      {/* Coupon Form */}
-                    {!activeCoupon ? (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                          <Tag size={9} />
-                          Promo Code
-                        </p>
-                        <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="Enter code"
-                              value={couponInput}
-                              onChange={(e) => setCouponInput(e.target.value)}
-                              className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
-                          >
-                            Apply
-                          </button>
-                        </form>
-                        {couponMessage && (
-                          <p className={`text-[10px] font-semibold px-1 ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                            {couponMessage.text}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
-                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                          <Tag size={14} className="stroke-[2.5]" />
-                          <div className="text-left">
-                            <p className="text-[11px] font-bold tracking-wider">{activeCoupon.code}</p>
-                            <p className="text-[9px] text-emerald-600/80 dark:text-emerald-500/80">{activeCoupon.description}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={removeCoupon}
-                          className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-
-                      {/* Breakdown */}
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex justify-between text-slate-400">
-                          <span>Items Subtotal:</span>
-                          <span>Rs. {cartSubtotal.toLocaleString()}</span>
-                        </div>
-                         {cartPricing.offerDiscount > 0 && (
-                           <div className="flex justify-between text-amber-600 font-semibold">
-                             <span>Buy 5, Get 1 Free:</span>
-                             <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
+                   {cart.length > 0 && (
+                     <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
+                       {/* Coupon Form */}
+                     {!activeCoupon ? (
+                       <div className="space-y-2">
+                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                           <Tag size={9} />
+                           Promo Code
+                         </p>
+                         <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                           <div className="relative flex-1">
+                             <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                             <input
+                               type="text"
+                               placeholder="Enter code"
+                               value={couponInput}
+                               onChange={(e) => setCouponInput(e.target.value)}
+                               className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
+                             />
                            </div>
+                           <button
+                             type="submit"
+                             className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
+                           >
+                             Apply
+                           </button>
+                         </form>
+                         {couponMessage && (
+                           <p className={`text-[10px] font-semibold px-1 ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                             {couponMessage.text}
+                           </p>
                          )}
-                         {activeCoupon && (
-                           <div className="flex justify-between text-emerald-600 font-semibold">
-                             <span>Coupon Discount:</span>
-                             <span>-Rs. {couponDiscount.toLocaleString()}</span>
+                       </div>
+                     ) : (
+                       <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
+                         <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                           <Tag size={14} className="stroke-[2.5]" />
+                           <div className="text-left">
+                             <p className="text-[11px] font-bold tracking-wider">{activeCoupon.code}</p>
+                             <p className="text-[9px] text-emerald-600/80 dark:text-emerald-500/80">{activeCoupon.description}</p>
                            </div>
-                         )}
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                          Buy 5 products of the same item and 1 product will be discounted.
-                        </div>
+                         </div>
+                         <button
+                           onClick={removeCoupon}
+                           className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
+                         >
+                           Remove
+                         </button>
+                       </div>
+                     )}
 
-                        <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
-                          <span>Grand Total:</span>
-                          <span>Rs. {cartGrandTotal.toLocaleString()}</span>
-                        </div>
-=======
-                {/* Cart pricing summary details */}
-                {cart.length > 0 && (
-                  <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
-                    {/* Breakdown */}
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Items Subtotal:</span>
-                        <span>Rs. {cartSubtotal.toLocaleString()}</span>
-                      </div>
-                      {cartPricing.offerDiscount > 0 && (
-                        <div className="flex justify-between text-amber-600 font-semibold">
-                          <span>Buy 5, Get 1 Free:</span>
-                          <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
-                        </div>
-                      )}
+                       {/* Breakdown */}
+                       <div className="space-y-1.5 text-xs">
+                         <div className="flex justify-between text-slate-400">
+                           <span>Items Subtotal:</span>
+                           <span>Rs. {cartSubtotal.toLocaleString()}</span>
+                         </div>
+                          {cartPricing.offerDiscount > 0 && (
+                            <div className="flex justify-between text-amber-600 font-semibold">
+                              <span>Buy 5, Get 1 Free:</span>
+                              <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {activeCoupon && (
+                            <div className="flex justify-between text-emerald-600 font-semibold">
+                              <span>Coupon Discount:</span>
+                              <span>-Rs. {couponDiscount.toLocaleString()}</span>
+                            </div>
+                          )}
+                         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                           Buy 5 products of the same item and 1 product will be discounted.
+                         </div>
 
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                        Buy 5 products of the same item and 1 product will be discounted.
-                      </div>
-                      
-                      <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
-                        <span>Grand Total:</span>
-                        <span>Rs. {cartGrandTotal.toLocaleString()}</span>
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
+                         <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
+                           <span>Grand Total:</span>
+                           <span>Rs. {cartGrandTotal.toLocaleString()}</span>
+                         </div>
                       </div>
 
                     {/* Checkout Button */}

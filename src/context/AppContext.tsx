@@ -23,6 +23,9 @@ interface AppContextType {
   celebrationMessage: string;
   celebrateFreeTea: () => void;
   dismissCelebration: () => void;
+  appError: string | null;
+  showAppError: (message: string) => void;
+  clearAppError: () => void;
   favorites: string[];
   userRole: 'customer' | 'cashier' | 'kitchen' | null;
   setUserRole: (role: 'customer' | 'cashier' | 'kitchen' | null) => void;
@@ -461,11 +464,19 @@ interface TableStatusEntry {
      if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
      toastTimeoutRef.current = window.setTimeout(() => setCelebrationActive(false), 4000);
    };
-   const dismissCelebration = () => {
-     setCelebrationActive(false);
-   };
+const dismissCelebration = () => {
+      setCelebrationActive(false);
+    };
 
-   // Persist prevGroup to localStorage
+    const [appError, setAppError] = useState<string | null>(null);
+    const showAppError = (message: string) => {
+      setAppError(message);
+    };
+    const clearAppError = () => {
+      setAppError(null);
+    };
+
+    // Persist prevGroup to localStorage
    useEffect(() => {
      try { localStorage.setItem('gc_prev_group', prevGroup.toString()); } catch { /* ignore */ }
    }, [prevGroup]);
@@ -889,9 +900,8 @@ interface TableStatusEntry {
       }, 0);
 
       const serviceCharge = 0; // Math.round(subtotal * 0.10);
-      const tax = 0; // Math.round(subtotal + serviceCharge) * 0.13);
+      const tax = 0; // Math.round((subtotal + serviceCharge) * 0.13);
 
-<<<<<<< HEAD
       const couponDiscount = activeCoupon ? (() => {
         if (activeCoupon.discountType === 'percentage') {
           return Math.round((subtotal * activeCoupon.value) / 100);
@@ -901,14 +911,6 @@ interface TableStatusEntry {
       const pricing = calculateCartPricing(cart, couponDiscount);
       const totalDiscount = pricing.offerDiscount + couponDiscount;
       const total = pricing.total;
-=======
-    const serviceCharge = 0; // Math.round(subtotal * 0.10);
-    const tax = 0; // Math.round((subtotal + serviceCharge) * 0.13);
-    const couponDiscount = calculateDiscount(subtotal, activeCoupon);
-    const pricing = calculateCartPricing(cart, couponDiscount);
-    const discount = pricing.offerDiscount + couponDiscount;
-    const total = pricing.total;
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 
        const newOrder: Order = {
         id: `CS-${1000 + orders.length + 1}`,
@@ -1525,11 +1527,14 @@ interface TableStatusEntry {
         toggleTheme,
         setOrderHistory,
         teaGroupCount,
-        celebrationActive,
-        celebrationMessage,
-        celebrateFreeTea,
-        dismissCelebration,
-    }}>
+celebrationActive,
+         celebrationMessage,
+         celebrateFreeTea,
+         dismissCelebration,
+         appError,
+         showAppError,
+         clearAppError,
+     }}>
       {children}
     </AppContext.Provider>
   );

@@ -13,19 +13,12 @@ export interface PricingBreakdown {
   }>;
 }
 
-<<<<<<< HEAD
 const isSaturday = (): boolean => new Date().getDay() === 6;
 
-=======
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
 const getItemUnitPrice = (item: CartItem): number => {
   const customCost = item.selectedCustomizations.reduce((cSum, cust) =>
     cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
   );
-<<<<<<< HEAD
-=======
-
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
   return item.product.price + customCost;
 };
 
@@ -34,7 +27,6 @@ export const calculateCartPricing = (cart: CartItem[], couponDiscount = 0): Pric
     return sum + getItemUnitPrice(item) * item.quantity;
   }, 0);
 
-<<<<<<< HEAD
   const saturday = isSaturday();
 
   const offerDetails = cart
@@ -49,29 +41,18 @@ export const calculateCartPricing = (cart: CartItem[], couponDiscount = 0): Pric
           itemId: item.id,
           name: item.product.name,
           freeUnits,
-          discount,
+discount,
         };
       }
 
       const freeUnits = Math.floor(item.quantity / 5);
       if (freeUnits <= 0) return null;
-=======
-  const offerDetails = cart
-    .map((item) => {
-      const freeUnits = Math.floor(item.quantity / 5);
-      if (freeUnits <= 0) return null;
-
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
       const discount = freeUnits * getItemUnitPrice(item);
       return {
         itemId: item.id,
         name: item.product.name,
         freeUnits,
-<<<<<<< HEAD
-        discount,
-=======
-        discount
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
+         discount,
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
@@ -84,12 +65,6 @@ export const calculateCartPricing = (cart: CartItem[], couponDiscount = 0): Pric
     offerDiscount,
     couponDiscount,
     total,
-<<<<<<< HEAD
     offerDetails,
   };
 };
-=======
-    offerDetails
-  };
-};
->>>>>>> 3bfde6a83394ca5a5be3b9f0e32219f64800844d
