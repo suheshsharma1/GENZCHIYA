@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useApp } from './context/AppContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import PromoBanner from './components/PromoBanner';
+
 import DemoSwitcher from './components/DemoSwitcher';
 
 const AppErrorToast: React.FC = () => {
@@ -23,7 +23,8 @@ import MenuPage from './pages/MenuPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import HistoryPage from './pages/HistoryPage';
 import AdminLoginPage from './pages/AdminLoginPage';
-import SplitDashboard from './pages/SplitDashboard';
+import CashierDashboard from './pages/CashierDashboard';
+import KitchenDashboard from './pages/KitchenDashboard';
 import QRTablesPage from './pages/QRTablesPage';
 import { CounterQRPage } from './pages/CounterQRPage';
 
@@ -51,17 +52,13 @@ const ProtectedRoute: React.FC<{
 };
 
 // Promo banner only on customer-facing pages
-const PROMO_BANNER_ROUTES = ['/', '/menu', '/tracking', '/history', '/about', '/qr-tables', '/counter-qr'];
-const HIDDEN_BANNER_ROUTES_PREFIXES = ['/admin', '/kitchen', '/login', '/staff'];
 
-const PromoBannerRoute: React.FC = () => {
+
+// Demo Switcher only on non-menu pages (menu page has its own integrated version)
+const DemoSwitcherOnlyOnNonMenu: React.FC = () => {
   const location = useLocation();
-  const isHidden = HIDDEN_BANNER_ROUTES_PREFIXES.some(r => 
-    location.pathname === r || location.pathname.startsWith(r + '/')
-  );
-  const isCustomerRoute = PROMO_BANNER_ROUTES.some(r => location.pathname === r || location.pathname.startsWith(r + '/'));
-  if (isHidden || !isCustomerRoute) return null;
-  return <PromoBanner />;
+  if (location.pathname === '/menu') return null;
+  return <DemoSwitcher />;
 };
 
 export const App: React.FC = () => {
@@ -69,58 +66,64 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <ErrorBoundary>
         <AppErrorToast />
-        <PromoBannerRoute />
+
         <Routes>
-        {/* Customer Facing Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/menu" element={<MenuPage />} />
-        <Route path="/tracking" element={<OrderTrackingPage />} />
-        <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />
-        <Route path="/history" element={<HistoryPage />} />
+          {/* Customer Facing Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="/tracking" element={<OrderTrackingPage />} />
+          <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />
+          <Route path="/history" element={<HistoryPage />} />
 
-        {/* Staff Auth Portal */}
-        <Route path="/login" element={<AdminLoginPage />} />
-        <Route path="/staff/login" element={<AdminLoginPage />} />
+          {/* Staff Auth Portal */}
+          <Route path="/login" element={<AdminLoginPage />} />
+          <Route path="/staff/login" element={<AdminLoginPage />} />
 
-        {/* Staff Protected Routes */}
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute allowedRole="staff">
-              <SplitDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/kitchen" 
-          element={
-            <ProtectedRoute allowedRole="staff">
-              <SplitDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/qr-tables" 
-          element={
-            <ProtectedRoute allowedRole="cashier">
-              <QRTablesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/counter-qr" 
-          element={
-            <ProtectedRoute allowedRole="cashier">
-              <CounterQRPage />
-            </ProtectedRoute>
-          } 
-        />
+          {/* Staff Dedicated Full-Width Dashboards */}
+          <Route 
+            path="/admin/cashier" 
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <CashierDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/kitchen" 
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <KitchenDashboard />
+              </ProtectedRoute>
+            } 
+          />
 
-        {/* Fallback redirect to homepage */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-        <DemoSwitcher />
+          {/* Direct Route Redirects */}
+          <Route path="/admin" element={<Navigate to="/admin/cashier" replace />} />
+          <Route path="/kitchen" element={<Navigate to="/admin/kitchen" replace />} />
+
+          {/* Additional Cashier Utilities */}
+          <Route 
+            path="/qr-tables" 
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <QRTablesPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/counter-qr" 
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <CounterQRPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Fallback redirect to homepage */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <DemoSwitcherOnlyOnNonMenu />
       </ErrorBoundary>
     </BrowserRouter>
   );

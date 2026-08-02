@@ -35,10 +35,10 @@ const testimonials = [
 
 export const Testimonials: React.FC = () => {
   return (
-    <section className="relative bg-brand-bg py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="relative bg-brand-bg dark:bg-brand-dark-bg transition-colors duration-300 py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-brand-primary/[0.03] rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-brand-accent/[0.04] rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-brand-primary/[0.03] dark:bg-brand-primary/[0.06] rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-brand-accent/[0.04] dark:bg-brand-accent/[0.06] rounded-full blur-[100px]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto">
@@ -52,10 +52,10 @@ export const Testimonials: React.FC = () => {
           <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.3em]">
             What Our Customers Say
           </span>
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-brand-text mt-3 font-brand-serif">
+          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-brand-text dark:text-white mt-3 font-brand-serif">
             Loved by Tea Lovers
           </h2>
-          <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed">
+          <p className="mt-6 text-sm sm:text-base text-gray-500 dark:text-gray-300 leading-relaxed">
             Thousands of customers trust GENZCHIYA for their daily tea experience.
             Here is what they have to say.
           </p>
@@ -70,31 +70,31 @@ export const Testimonials: React.FC = () => {
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 * index }}
               whileHover={{ y: -4 }}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-brand-primary/10 transition-all duration-300"
+              className="bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-brand-dark-border hover:shadow-lg hover:border-brand-primary/20 dark:hover:border-brand-primary/40 transition-all duration-300"
             >
-              <Quote size={24} className="text-brand-primary/10 mb-3" />
+              <Quote size={24} className="text-brand-primary/20 dark:text-brand-primary/40 mb-3" />
               <div className="flex gap-0.5 mb-4">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
                     size={14}
-                    className={i < testimonial.rating ? 'text-brand-accent fill-brand-accent' : 'text-gray-200'}
+                    className={i < testimonial.rating ? 'text-brand-accent fill-brand-accent' : 'text-gray-200 dark:text-gray-700'}
                   />
                 ))}
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed mb-5">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-5">
                 &ldquo;{testimonial.text}&rdquo;
               </p>
               <div className="flex items-center gap-3">
                 <img
                   src={testimonial.avatar}
                   alt={testimonial.name}
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-brand-dark-border"
                   loading="lazy"
                 />
                 <div>
-                  <p className="text-xs font-bold text-brand-text">{testimonial.name}</p>
-                  <p className="text-[10px] text-gray-400">{testimonial.role}</p>
+                  <p className="text-xs font-bold text-brand-text dark:text-white">{testimonial.name}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-400">{testimonial.role}</p>
                 </div>
               </div>
             </motion.div>

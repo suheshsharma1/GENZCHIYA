@@ -11,7 +11,11 @@ interface AppContextType {
   orderHistory: Order[];
   reviews: Review[];
   messages: ContactMessage[];
+  // cart is a computed view of tableCartMap[activeTable] ?? []
   cart: CartItem[];
+  // Full per-table cart map exposed so TableSelectionModal can check if a
+  // table's cart is non-empty before allowing a silent switch.
+  tableCartMap: Record<string, CartItem[]>;
   activeTable: string;
   totalTables: number;
   setTotalTables: (count: number) => void;
@@ -42,7 +46,11 @@ interface AppContextType {
   markTableAvailable: (tableNum: string) => void;
   freeTable: (tableNum: string) => void;
   resetAllTableStatuses: () => void;
-  addToCart: (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string) => void;
+  resetTable: (tableNum: string) => void;
+  currentSessionId: string;
+  // Returns true if the item was added, false if no table was selected (caller
+  // should open the table-selection modal in that case).
+  addToCart: (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string) => boolean;
   removeFromCart: (cartItemId: string) => void;
   updateCartQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -62,7 +70,7 @@ interface AppContextType {
   renameCategory: (oldName: string, newName: string) => boolean;
   deleteCategory: (name: string) => void;
   moveProductsToCategory: (productIds: string[], targetCategory: string) => void;
-  updateProduct: (productId: string, updates: { name: string; price: number; category: string; description: string; preparationTime: number; image: string }) => void;
+  updateProduct: (productId: string, updates: { name: string; price: number; category: string; description: string; preparationTime: number; image: string; available?: boolean }) => void;
   deleteProduct: (productId: string) => void;
   deleteProducts: (productIds: string[]) => void;
   toggleFavorite: (productId: string) => void;
@@ -316,23 +324,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mocks;
   });
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('gc_cart');
+  // Per-table cart map: { tableNumber: CartItem[] }
+  // 'cart' below is a derived view of tableCartMap[activeTable] ?? []
+  const [tableCartMap, setTableCartMap] = useState<Record<string, CartItem[]>>(() => {
+    // Migrate legacy gc_cart into the new per-table map for the active table
+    const saved = localStorage.getItem('gc_table_carts');
     if (saved) {
       try {
-        const parsed: CartItem[] = JSON.parse(saved);
-        return parsed.map(item => {
-          const match = initialProducts.find(ip => ip.id === item.product.id);
-          if (match && !item.product.image) {
-            return { ...item, product: { ...item.product, image: match.image } };
-          }
-          return item;
+        const parsed: Record<string, CartItem[]> = JSON.parse(saved);
+        // Refresh product images inside each table's cart
+        const refreshed: Record<string, CartItem[]> = {};
+        Object.entries(parsed).forEach(([tbl, items]) => {
+          refreshed[tbl] = items.map(item => {
+            const match = initialProducts.find(ip => ip.id === item.product.id);
+            if (match && !item.product.image) {
+              return { ...item, product: { ...item.product, image: match.image } };
+            }
+            return item;
+          });
         });
+        return refreshed;
       } catch (err) {
-        console.error('Failed to parse gc_cart from storage', err);
+        console.error('Failed to parse gc_table_carts from storage', err);
       }
     }
-    return [];
+    // Legacy migration: if gc_cart has items, put them in a generic key
+    // (they'll remain until the user selects a table and re-adds items)
+    const legacy = localStorage.getItem('gc_cart');
+    if (legacy) {
+      try {
+        const parsed: CartItem[] = JSON.parse(legacy);
+        if (parsed.length > 0) {
+          // Discard legacy pre-table cart — do not mix into new per-table system
+          localStorage.removeItem('gc_cart');
+        }
+      } catch { /* ignore */ }
+    }
+    return {};
   });
 
   const [activeTable, setActiveTable] = useState<string>(() => {
@@ -422,6 +450,21 @@ interface TableStatusEntry {
   const resetAllTableStatuses = () => {
     setTableStatuses({});
   };
+
+  // Alias: resets a single table to 'available' (same as freeTable)
+  const resetTable = (tableNum: string) => freeTable(tableNum);
+
+  // A stable daily session identifier derived from the local date (YYYY-MM-DD).
+  // Components can use this to scope per-session data without needing a separate state.
+  const getLocalDateKey = (): string => {
+    const d = new Date();
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0')
+    ].join('-');
+  };
+  const currentSessionId = getLocalDateKey();
 
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(() => {
     return localStorage.getItem('gc_current_order_id') || null;
@@ -545,6 +588,23 @@ const dismissCelebration = () => {
     }
   }, [isDarkMode]);
 
+  // Run daily reset check on app open, and every 60 s to catch midnight rollovers
+  // without needing a page refresh. Uses a ref-based stable reference to avoid
+  // stale closure issues across intervals.
+  const autoDailyResetRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    // Keep the ref current so the interval always calls the latest version.
+    autoDailyResetRef.current = autoDailyReset;
+  });
+  useEffect(() => {
+    // Immediate check on mount (handles overnight app-closed scenario).
+    autoDailyResetRef.current();
+    const intervalId = setInterval(() => {
+      autoDailyResetRef.current();
+    }, 60_000); // poll every 60 seconds
+    return () => clearInterval(intervalId);
+  }, []); // runs once on mount; interval keeps it live
+
   const [currentTrackingOrder, setCurrentTrackingOrder] = useState<Order | null>(() => {
     const saved = localStorage.getItem('gc_tracking_order');
     if (saved) {
@@ -606,9 +666,12 @@ const dismissCelebration = () => {
     localStorage.setItem('gc_order_history', JSON.stringify(orderHistory));
   }, [orderHistory]);
 
+  // Derive the current table's cart as a simple computed value
+  const cart: CartItem[] = tableCartMap[activeTable] ?? [];
+
   useEffect(() => {
-    localStorage.setItem('gc_cart', JSON.stringify(cart));
-  }, [cart]);
+    localStorage.setItem('gc_table_carts', JSON.stringify(tableCartMap));
+  }, [tableCartMap]);
 
   useEffect(() => {
     localStorage.setItem('gc_active_coupon', JSON.stringify(activeCoupon));
@@ -770,35 +833,53 @@ const dismissCelebration = () => {
     localStorage.removeItem('gc_active_table');
   };
 
-   const addToCart = (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string) => {
+  const addToCart = (product: Product, quantity: number, customizations: SelectedCustomization[], notes?: string): boolean => {
+    // Guard: a table must be selected before adding anything to the cart.
+    // Return false so the caller (MenuPage) can open the table-selection modal.
+    if (!activeTable) {
+      return false;
+    }
+
     const cartItemId = generateCartItemId(product.id, customizations);
     const isTeaProduct = product.category.toLowerCase() === 'tea';
-    setCart(prevCart => {
+    const table = activeTable; // capture for closure
+
+    setTableCartMap(prev => {
+      const prevCart = prev[table] ?? [];
       const existingIdx = prevCart.findIndex(item => item.id === cartItemId);
+      let nextCart: CartItem[];
       if (existingIdx > -1) {
-        const newCart = [...prevCart];
-        newCart[existingIdx] = {
-          ...newCart[existingIdx],
-          quantity: newCart[existingIdx].quantity + quantity,
-          notes: notes || newCart[existingIdx].notes
+        nextCart = [...prevCart];
+        nextCart[existingIdx] = {
+          ...nextCart[existingIdx],
+          quantity: nextCart[existingIdx].quantity + quantity,
+          notes: notes || nextCart[existingIdx].notes
         };
-        return newCart;
+      } else {
+        nextCart = [...prevCart, {
+          id: cartItemId,
+          product,
+          quantity,
+          selectedCustomizations: customizations,
+          notes
+        }];
       }
-      return [...prevCart, {
-        id: cartItemId,
-        product,
-        quantity,
-        selectedCustomizations: customizations,
-        notes
-      }];
+      return { ...prev, [table]: nextCart };
     });
+
     if (isTeaProduct) {
       setTeaGroupCount(prev => prev + quantity);
     }
+    return true;
   };
 
   const removeFromCart = (cartItemId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== cartItemId));
+    if (!activeTable) return;
+    const table = activeTable;
+    setTableCartMap(prev => {
+      const prevCart = prev[table] ?? [];
+      return { ...prev, [table]: prevCart.filter(item => item.id !== cartItemId) };
+    });
   };
 
   const updateCartQuantity = (cartItemId: string, quantity: number) => {
@@ -806,8 +887,13 @@ const dismissCelebration = () => {
       removeFromCart(cartItemId);
       return;
     }
-    setCart(prevCart => prevCart.map(item => item.id === cartItemId ? { ...item, quantity } : item));
-   };
+    if (!activeTable) return;
+    const table = activeTable;
+    setTableCartMap(prev => {
+      const prevCart = prev[table] ?? [];
+      return { ...prev, [table]: prevCart.map(item => item.id === cartItemId ? { ...item, quantity } : item) };
+    });
+  };
 
    // Group-of-5 tea celebration: trigger when crossing a multiple-of-5 boundary
    useEffect(() => {
@@ -818,12 +904,19 @@ const dismissCelebration = () => {
       }
     }, [teaGroupCount, prevGroup]);
 
-    const clearCart = () => {
-     setCart([]);
-     setActiveCoupon(null);
-     setTeaGroupCount(0);
-     setPrevGroup(0);
-   };
+  const clearCart = () => {
+    // Only clear the active table's cart; other tables are unaffected.
+    if (activeTable) {
+      setTableCartMap(prev => {
+        const next = { ...prev };
+        delete next[activeTable];
+        return next;
+      });
+    }
+    setActiveCoupon(null);
+    setTeaGroupCount(0);
+    setPrevGroup(0);
+  };
 
   const applyCoupon = (code: string) => {
     const cleanCode = code.trim().toUpperCase();
@@ -945,8 +1038,16 @@ const dismissCelebration = () => {
     localStorage.setItem('gc_active_table', newOrder.tableNumber);
     lockTable(newOrder.tableNumber, newOrder.id);
 
-    clearCart();
-    
+    // Clear only the placed table's cart — other tables remain untouched.
+    setTableCartMap(prev => {
+      const next = { ...prev };
+      delete next[newOrder.tableNumber];
+      return next;
+    });
+    setActiveCoupon(null);
+    setTeaGroupCount(0);
+    setPrevGroup(0);
+
     return newOrder;
   };
 
@@ -1388,6 +1489,36 @@ const dismissCelebration = () => {
     setActiveTable('');
   };
 
+  // ─── Automatic Daily Payment History Reset ───────────────────────────────
+  // Clears ONLY the active orders for the new day — preserves orderHistory,
+  // products, categories, coupons, QR tables, settings, and all analytics.
+  const autoDailyReset = () => {
+    const todayKey = getLocalDateKey();
+    const lastResetKey = localStorage.getItem('gc_last_payment_reset_date');
+
+    // First-ever run: just stamp today so we don't wipe on first load.
+    if (!lastResetKey) {
+      localStorage.setItem('gc_last_payment_reset_date', todayKey);
+      return;
+    }
+
+    // Midnight has passed → clear ONLY today's active payment queue.
+    if (lastResetKey !== todayKey) {
+      // Remove active (non-completed) orders that are stale from the previous day.
+      localStorage.setItem('gc_orders', JSON.stringify([]));
+      localStorage.removeItem('gc_tracking_order');
+      localStorage.removeItem('gc_current_order_id');
+      localStorage.removeItem('gc_active_table');
+      setOrders([]);
+      setCurrentTrackingOrder(null);
+      setCurrentOrderId(null);
+      setActiveTable('');
+      // Stamp the new day so this only fires once per day.
+      localStorage.setItem('gc_last_payment_reset_date', todayKey);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const resetAllData = () => {
     localStorage.removeItem('gc_products');
     localStorage.removeItem('gc_categories');
@@ -1395,6 +1526,7 @@ const dismissCelebration = () => {
     localStorage.removeItem('orderHistory');
     localStorage.removeItem('gc_order_history');
     localStorage.removeItem('gc_cart');
+    localStorage.removeItem('gc_table_carts');
     localStorage.removeItem('gc_active_coupon');
      localStorage.removeItem('gc_coupons');
      localStorage.removeItem('gc_tea_group_count');
@@ -1417,7 +1549,7 @@ const dismissCelebration = () => {
     setOrderHistory(mocks);
     localStorage.setItem('orderHistory', JSON.stringify(mocks));
     localStorage.setItem('gc_order_history', JSON.stringify(mocks));
-    setCart([]);
+    setTableCartMap({});
     setFavorites([]);
     setCurrentTrackingOrder(null);
     setCurrentOrderId(null);
@@ -1465,6 +1597,7 @@ const dismissCelebration = () => {
       reviews,
       messages,
       cart,
+      tableCartMap,
       activeTable,
       totalTables,
       setTotalTables,
@@ -1487,6 +1620,8 @@ const dismissCelebration = () => {
        markTableAvailable,
        freeTable,
        resetAllTableStatuses,
+       resetTable,
+       currentSessionId,
        addToCart,
       removeFromCart,
       updateCartQuantity,

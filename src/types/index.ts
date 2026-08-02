@@ -68,6 +68,7 @@ export interface PaymentDetails {
 export interface Order {
   id: string;
   tableNumber: string;
+  sessionId?: string;
   customerName?: string;
   customerPhone?: string;
   items: CartItem[];
@@ -105,6 +106,7 @@ export interface Review {
   id: string;
   orderId?: string;
   tableNumber?: string;
+  sessionId?: string;
   name?: string;
   rating: number;
   comment: string;

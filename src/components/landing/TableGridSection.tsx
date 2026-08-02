@@ -19,7 +19,7 @@ const TableGridSection: React.FC = () => {
   };
 
   return (
-    <section className="py-20 bg-brand-cream dark:bg-brand-dark-bg">
+    <section className="py-20 bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 bg-brand-emerald/10 dark:bg-brand-amber/10 px-4 py-1.5 rounded-full mb-4">

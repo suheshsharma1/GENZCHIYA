@@ -1,9 +1,10 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket, Check,
-  ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed, QrCode 
+  ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed, QrCode,
+  Sparkles, ArrowRight, LayoutDashboard, ShieldCheck, Smartphone
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Product, SelectedCustomization, CartItem } from '../types';
@@ -13,17 +14,18 @@ import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
 import { CelebrationModal } from '../components/CelebrationModal';
+import { isSaturday, isTeaProduct } from '../utils/pricing';
 
 export const MenuPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
-   const { 
-     products, cart, activeTable, currentOrderId, activeCoupon, couponsList: _couponsList, favorites, 
-     addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, calculateCartPricing,
-     placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession,
-     teaGroupCount, celebrationActive, celebrationMessage, celebrateFreeTea, dismissCelebration
-   } = useApp();
+
+  const {
+      products, cart, activeTable, currentOrderId, activeCoupon, couponsList: _couponsList, favorites, 
+      addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, calculateCartPricing,
+      placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession,
+      teaGroupCount, celebrationActive, celebrationMessage, celebrateFreeTea, dismissCelebration, setUserRole
+    } = useApp();
 
   const urlTable = searchParams.get('table') || '';
   const urlCategory = searchParams.get('category') || '';
@@ -50,12 +52,25 @@ export const MenuPage: React.FC = () => {
     }
   }, [activeTable, urlTable, navigate]);
 
-  // Page States
+// Page States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
    const [showCart, setShowCart] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showTableModal, setShowTableModal] = useState(false);
+   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+   const [showTableModal, setShowTableModal] = useState(false);
+   const [showDemoSwitcher, setShowDemoSwitcher] = useState(false);
+
+  // Holds a product that was blocked because no table was selected.
+  // Once the user picks a table, the useEffect below will fire the deferred add.
+  const [pendingAddProduct, setPendingAddProduct] = useState<{
+    product: Product;
+    quantity: number;
+    customizations: SelectedCustomization[];
+    notes: string;
+  } | null>(null);
+  // Message shown inside the TableSelectionModal when it was opened due to a
+  // blocked add-to-cart (no table selected).
+  const [tableModalMessage, setTableModalMessage] = useState<string | undefined>(undefined);
   
   // Customization selection state
   const [customizationSelections, setCustomizationSelections] = useState<SelectedCustomization[]>([]);
@@ -194,6 +209,21 @@ export const MenuPage: React.FC = () => {
   // Add customized item to cart
   const handleAddToCart = () => {
     if (!selectedProduct) return;
+
+    // Guard: no table selected — save the pending product and open table modal
+    if (!activeTable) {
+      setPendingAddProduct({
+        product: selectedProduct,
+        quantity: customizationQuantity,
+        customizations: customizationSelections,
+        notes: customizationNotes,
+      });
+      setTableModalMessage('Please select or scan your table before adding items.');
+      setShowTableModal(true);
+      setSelectedProduct(null);
+      return;
+    }
+
     addToCart(selectedProduct, customizationQuantity, customizationSelections, customizationNotes);
     const addedName = selectedProduct.name;
     const addedQty = customizationQuantity;
@@ -205,6 +235,25 @@ export const MenuPage: React.FC = () => {
     const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0) + addedQty;
     showAddToast(addedName, addedQty, totalCount);
   };
+
+  // Deferred add: fires once the user selects a table after being blocked
+  useEffect(() => {
+    if (pendingAddProduct && activeTable) {
+      const added = addToCart(
+        pendingAddProduct.product,
+        pendingAddProduct.quantity,
+        pendingAddProduct.customizations,
+        pendingAddProduct.notes,
+      );
+      if (added) {
+        const totalCount =
+          cart.reduce((sum, item) => sum + item.quantity, 0) + pendingAddProduct.quantity;
+        showAddToast(pendingAddProduct.product.name, pendingAddProduct.quantity, totalCount);
+      }
+      setPendingAddProduct(null);
+      setTableModalMessage(undefined);
+    }
+  }, [activeTable, pendingAddProduct]);
 
   // Calculate pricing breakdown
   const basePricing = useMemo(() => calculateCartPricing(cart, 0), [cart]);
@@ -259,6 +308,28 @@ export const MenuPage: React.FC = () => {
   const handlePaymentSuccess = (mobile: string) => {
     setShowPaymentGateway(false);
     processOrderPlacement();
+  };
+
+  const handleSelectCustomer = () => {
+    try {
+      localStorage.setItem('gc_user_role', 'customer');
+      if (setUserRole) setUserRole('customer');
+    } catch (err) {
+      console.error('Failed to set customer role', err);
+    }
+    setShowDemoSwitcher(false);
+    navigate('/menu');
+  };
+
+  const handleSelectStaff = () => {
+    try {
+      localStorage.setItem('gc_user_role', 'cashier');
+      if (setUserRole) setUserRole('cashier');
+    } catch (err) {
+      console.error('Failed to set cashier role', err);
+    }
+    setShowDemoSwitcher(false);
+    navigate('/admin/cashier');
   };
 
   return (
@@ -492,105 +563,129 @@ export const MenuPage: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. Floating Cart (button expands a slide-out mini-cart on hover/click) */}
-      <div
-        id="gc-minicart-wrap"
-        className="fixed bottom-6 right-4 sm:right-6 z-40"
-        onMouseEnter={() => setMiniCartOpen(true)}
-        onMouseLeave={() => setMiniCartOpen(false)}
-      >
-        {/* Slide-out mini-cart panel */}
-        <AnimatePresence>
-          {miniCartOpen && cart.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 24, scale: 0.96 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 24, scale: 0.96 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="absolute bottom-0 right-full mr-3 sm:mr-0 sm:right-16 sm:left-auto left-0 w-[78vw] max-w-[18rem] sm:w-64 max-h-[60vh] sm:max-h-[70vh] bg-white dark:bg-brand-dark-card rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col origin-bottom-right"
-            >
-              {/* Header */}
-              <div className="px-4 py-3 flex items-center gap-2 border-b border-slate-100 dark:border-brand-dark-border/50">
-                <div className="p-1.5 rounded-lg bg-brand-emerald/10 dark:bg-brand-amber/15">
-                  <ShoppingBag size={15} className="text-brand-emerald dark:text-brand-amber" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-800 dark:text-slate-100 leading-tight">Your Cart</p>
-                  <p className="text-[9px] text-slate-400 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items added</p>
-                </div>
-              </div>
-
-              {/* Scrollable product list (latest up to 5) */}
-              <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5 scrollbar-thin">
-                {cart.slice(-5).map((item) => {
-                  const unit = item.product.price + item.selectedCustomizations.reduce(
-                    (cSum, cust) => cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
-                  );
-                  const lineTotal = unit * item.quantity;
-                  return (
-                    <div key={item.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
-                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
-                          {item.product.name}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          {item.quantity > 1
-                            ? `${item.quantity} × Rs. ${unit.toLocaleString()}`
-                            : `Rs. ${unit.toLocaleString()}`}
-                          <span className="font-semibold text-brand-emerald dark:text-brand-amber">
-                            {'  ·  Rs. '}{lineTotal.toLocaleString()}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {cart.length > 5 && (
-                  <p className="text-[9px] text-center text-slate-400 font-medium pt-1">
-                    +{cart.length - 5} more items in your cart
-                  </p>
-                )}
-              </div>
-
-              {/* Footer: totals + View Cart */}
-              <div className="px-4 py-3 border-t border-slate-100 dark:border-brand-dark-border/50 bg-slate-50/70 dark:bg-brand-dark-bg/50">
-                <div className="flex justify-between items-center mb-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Grand Total</span>
-                  <span className="text-sm font-extrabold text-brand-emerald dark:text-brand-amber">
-                    Rs. {cartGrandTotal.toLocaleString()}
-                  </span>
-                </div>
-                <button
-                  onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
-                  className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
-                >
-                  View Cart
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Floating cart button */}
-        <motion.button
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
-          className="relative bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold px-5 py-4 rounded-2xl shadow-xl shadow-brand-emerald/25 dark:shadow-brand-amber/25 flex items-center gap-3 cursor-pointer group"
+      {/* 3. Floating Action Buttons Container */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col sm:flex-row gap-6 sm:gap-6 items-end sm:items-center">
+        {/* Floating Cart (button expands a slide-out mini-cart on hover/click) */}
+        <div
+          id="gc-minicart-wrap"
+          className="relative"
+          onMouseEnter={() => setMiniCartOpen(true)}
+          onMouseLeave={() => setMiniCartOpen(false)}
         >
-          <div className="relative">
-            <ShoppingBag size={20} />
-            {cart.length > 0 && (
-              <span className="absolute -top-2.5 -right-2.5 bg-rose-500 text-white font-bold text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand-emerald dark:border-brand-amber">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)}
-              </span>
+          {/* Slide-out mini-cart panel */}
+          <AnimatePresence>
+            {miniCartOpen && cart.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 24, scale: 0.96 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 24, scale: 0.96 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                className="absolute bottom-0 right-full mr-3 sm:mr-0 sm:right-16 sm:left-auto left-0 w-[78vw] max-w-[18rem] sm:w-64 max-h-[60vh] sm:max-h-[70vh] bg-white dark:bg-brand-dark-card rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col origin-bottom-right"
+              >
+                {/* Header */}
+                <div className="px-4 py-3 flex items-center gap-2 border-b border-slate-100 dark:border-brand-dark-border/50">
+                  <div className="p-1.5 rounded-lg bg-brand-emerald/10 dark:bg-brand-amber/15">
+                    <ShoppingBag size={15} className="text-brand-emerald dark:text-brand-amber" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-100 leading-tight">Your Cart</p>
+                    <p className="text-[9px] text-slate-400 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items added</p>
+                  </div>
+                </div>
+
+                {/* Scrollable product list (latest up to 5) */}
+                <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5 scrollbar-thin">
+                  {cart.slice(-5).map((item) => {
+                    const unit = item.product.price + item.selectedCustomizations.reduce(
+                      (cSum, cust) => cSum + cust.selections.reduce((sSum, sel) => sSum + sel.price, 0), 0
+                    );
+                    const lineTotal = unit * item.quantity;
+                    return (
+                      <div key={item.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0">
+                          <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                            {item.product.name}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {item.quantity > 1
+                              ? `${item.quantity} × Rs. ${unit.toLocaleString()}`
+                              : `Rs. ${unit.toLocaleString()}`}
+                            <span className="font-semibold text-brand-emerald dark:text-brand-amber">
+                              {'  ·  Rs. '}{lineTotal.toLocaleString()}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {cart.length > 5 && (
+                    <p className="text-[9px] text-center text-slate-400 font-medium pt-1">
+                      +{cart.length - 5} more items in your cart
+                    </p>
+                  )}
+                </div>
+
+                {/* Footer: totals + View Cart */}
+                <div className="px-4 py-3 border-t border-slate-100 dark:border-brand-dark-border/50 bg-slate-50/70 dark:bg-brand-dark-bg/50">
+                  <div className="flex justify-between items-center mb-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Grand Total</span>
+                    <span className="text-sm font-extrabold text-brand-emerald dark:text-brand-amber">
+                      Rs. {cartGrandTotal.toLocaleString()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
+                    className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                  >
+                    View Cart
+                  </button>
+                </div>
+              </motion.div>
             )}
-          </div>
-          <span className="text-xs uppercase tracking-wider font-bold border-l border-white/20 dark:border-brand-dark-bg/20 pl-3">
-            {cart.length > 0 ? `Rs. ${cartGrandTotal.toLocaleString()}` : 'View Cart'}
+          </AnimatePresence>
+
+          {/* Floating cart button */}
+          <motion.button
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            onClick={() => { setMiniCartOpen(false); setShowCart(true); }}
+            className="relative bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold px-5 py-4 rounded-2xl shadow-xl shadow-brand-emerald/25 dark:shadow-brand-amber/25 flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="relative">
+              <ShoppingBag size={20} />
+              {cart.length > 0 && (
+                <span className="absolute -top-2.5 -right-2.5 bg-rose-500 text-white font-bold text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand-emerald dark:border-brand-amber">
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                </span>
+              )}
+            </div>
+            <span className="text-xs uppercase tracking-wider font-bold border-l border-white/20 dark:border-brand-dark-bg/20 pl-3">
+              {cart.length > 0 ? `Rs. ${cartGrandTotal.toLocaleString()}` : 'View Cart'}
+            </span>
+          </motion.button>
+        </div>
+
+        {/* Demo Switcher Trigger Button */}
+        <motion.button
+          type="button"
+          onClick={() => setShowDemoSwitcher(true)}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Open Demo Mode Switcher"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl shadow-brand-emerald/10 dark:shadow-brand-amber/10 glass-light dark:glass-dark bg-white/90 dark:bg-brand-dark-card/90 border border-brand-emerald/20 dark:border-white/10 hover:border-brand-primary/40 dark:hover:border-brand-amber/40 text-brand-text dark:text-white transition-all cursor-pointer group animate-float"
+        >
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary dark:bg-brand-amber opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-primary dark:bg-brand-amber"></span>
+          </span>
+          <Sparkles className="w-4 h-4 text-brand-primary dark:text-brand-amber group-hover:rotate-12 transition-transform duration-300" />
+          <span className="text-xs font-black tracking-wider uppercase bg-gradient-to-r from-brand-primary via-brand-primary-dark to-brand-accent dark:from-brand-amber dark:to-brand-gold bg-clip-text text-transparent">
+            Demo Switcher
           </span>
         </motion.button>
       </div>
@@ -893,111 +988,51 @@ export const MenuPage: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                          </div>
                         </div>
-                      );
-                    })
-                  )}
-                 </div>
-
-                   {cart.length > 0 && (
-                     <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
-                       {/* Coupon Form */}
-                     {!activeCoupon ? (
-                       <div className="space-y-2">
-                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                           <Tag size={9} />
-                           Promo Code
-                         </p>
-                         <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                           <div className="relative flex-1">
-                             <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                             <input
-                               type="text"
-                               placeholder="Enter code"
-                               value={couponInput}
-                               onChange={(e) => setCouponInput(e.target.value)}
-                               className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-card rounded-xl outline-none text-xs font-semibold focus:border-brand-sage uppercase tracking-wider"
-                             />
-                           </div>
-                           <button
-                             type="submit"
-                             className="bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-bold text-xs px-4 rounded-xl shadow transition-colors cursor-pointer"
-                           >
-                             Apply
-                           </button>
-                         </form>
-                         {couponMessage && (
-                           <p className={`text-[10px] font-semibold px-1 ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                             {couponMessage.text}
-                           </p>
-                         )}
-                       </div>
-                     ) : (
-                       <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 px-3.5 py-2.5 rounded-xl">
-                         <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                           <Tag size={14} className="stroke-[2.5]" />
-                           <div className="text-left">
-                             <p className="text-[11px] font-bold tracking-wider">{activeCoupon.code}</p>
-                             <p className="text-[9px] text-emerald-600/80 dark:text-emerald-500/80">{activeCoupon.description}</p>
-                           </div>
-                         </div>
-                         <button
-                           onClick={removeCoupon}
-                           className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
-                         >
-                           Remove
-                         </button>
-                       </div>
-                     )}
-
-                       {/* Breakdown */}
-                       <div className="space-y-1.5 text-xs">
-                         <div className="flex justify-between text-slate-400">
-                           <span>Items Subtotal:</span>
-                           <span>Rs. {cartSubtotal.toLocaleString()}</span>
-                         </div>
-                          {cartPricing.offerDiscount > 0 && (
-                            <div className="flex justify-between text-amber-600 font-semibold">
-                              <span>Buy 5, Get 1 Free:</span>
-                              <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
-                            </div>
-                          )}
-                          {activeCoupon && (
-                            <div className="flex justify-between text-emerald-600 font-semibold">
-                              <span>Coupon Discount:</span>
-                              <span>-Rs. {couponDiscount.toLocaleString()}</span>
-                            </div>
-                          )}
-                         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                           Buy 5 products of the same item and 1 product will be discounted.
-                         </div>
-
-                         <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
-                           <span>Grand Total:</span>
-                           <span>Rs. {cartGrandTotal.toLocaleString()}</span>
-                         </div>
                       </div>
-
-                    {/* Checkout Button */}
-                    <button
-                      onClick={() => {
-                        setShowCheckout(true);
-                      }}
-                      className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer"
-                    >
-                      <span>Proceed to Checkout</span>
-                      <ChevronRight size={14} className="stroke-[2.5]" />
-                    </button>
-                  </div>
+                    );
+                  })
                 )}
-              </motion.div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
+              </div>
 
-      {/* 6. Checkout Info Modal */}
+              {cart.length > 0 && (
+                <div className="p-5 border-t border-slate-100 dark:border-brand-dark-border/40 bg-slate-50 dark:bg-brand-dark-bg/60 space-y-4">
+                  {/* Breakdown */}
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between text-slate-400">
+                      <span>Items Subtotal:</span>
+                      <span>Rs. {cartSubtotal.toLocaleString()}</span>
+                    </div>
+                    {cartPricing.offerDiscount > 0 && (
+                      <div className="flex justify-between text-amber-600 font-semibold">
+                        <span>Buy 5, Get 1 Free:</span>
+                        <span>-Rs. {cartPricing.offerDiscount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                      Buy 5 products of the same item and 1 product will be discounted.
+                    </div>
+                    <div className="flex justify-between font-extrabold text-sm border-t border-slate-200 dark:border-brand-dark-border/40 pt-2 text-brand-emerald dark:text-brand-amber">
+                      <span>Grand Total:</span>
+                      <span>Rs. {cartGrandTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Checkout Button */}
+                  <button
+                    onClick={() => { setShowCheckout(true); }}
+                    className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    <span>Proceed to Checkout</span>
+                    <ChevronRight size={14} className="stroke-[2.5]" />
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      )}
+    </AnimatePresence>
       <AnimatePresence>
         {showCheckout && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1133,8 +1168,18 @@ export const MenuPage: React.FC = () => {
         {/* Table Selection & Switcher Modal */}
         <TableSelectionModal
           isOpen={showTableModal}
-          onClose={() => setShowTableModal(false)}
+          onClose={() => {
+            setShowTableModal(false);
+            // If the user dismissed without selecting a table, discard the
+            // pending product so the cart stays empty (requirement #3).
+            if (!activeTable) {
+              setPendingAddProduct(null);
+              setTableModalMessage(undefined);
+            }
+          }}
+          message={tableModalMessage}
         />
+
 
         {/* Group Tea Discount Celebration */}
         <CelebrationModal
@@ -1142,6 +1187,129 @@ export const MenuPage: React.FC = () => {
           onClose={dismissCelebration}
           message={celebrationMessage}
         />
+
+        {/* Demo Switcher Modal */}
+        <AnimatePresence>
+          {showDemoSwitcher && (
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setShowDemoSwitcher(false)}
+                className="fixed inset-0 bg-black/65 backdrop-blur-md"
+                aria-hidden="true"
+              />
+
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="demo-switcher-title"
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative w-full max-w-3xl glass-light dark:glass-dark bg-white/95 dark:bg-brand-dark-card/95 border border-white/40 dark:border-brand-dark-border shadow-2xl shadow-brand-emerald/5 dark:shadow-brand-amber/5 rounded-3xl p-6 sm:p-8 z-10 overflow-hidden"
+              >
+                <div className="absolute -top-24 -right-24 w-60 h-60 bg-brand-primary/10 dark:bg-brand-amber/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-brand-accent/20 dark:bg-brand-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+                <button
+                  type="button"
+                  onClick={() => setShowDemoSwitcher(false)}
+                  aria-label="Close modal"
+                  className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer z-20"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="mb-6 sm:mb-8 text-center sm:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 dark:bg-brand-amber/10 border border-brand-primary/20 dark:border-brand-amber/30 text-brand-primary dark:text-brand-amber text-xs font-bold uppercase tracking-wider mb-3">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    GENZCHIYA Demo Experience
+                  </div>
+                  <h2 id="demo-switcher-title" className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Choose Demo Mode
+                  </h2>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    Switch seamlessly between customer ordering and staff operational dashboards.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                  <motion.div
+                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col justify-between p-6 rounded-2xl bg-white dark:bg-brand-dark-bg/60 border border-slate-200/80 dark:border-brand-dark-border/80 hover:border-brand-primary/50 dark:hover:border-brand-amber/50 shadow-md hover:shadow-xl transition-all group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-rose-50 dark:bg-brand-primary/10 text-brand-primary dark:text-brand-primary-light group-hover:scale-110 transition-transform">
+                          <Smartphone className="w-7 h-7" />
+                        </div>
+                        <span className="text-xl" role="img" aria-label="Customer phone">📱</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        Customer Mode
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                        Scan QR Code, browse the menu, customize your order, add items to the cart, place an order, and track your order.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSelectCustomer}
+                      className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
+                    >
+                      <span>Enter Customer Mode</span>
+                      <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </motion.div>
+
+                  <motion.div
+                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col justify-between p-6 rounded-2xl bg-white dark:bg-brand-dark-bg/60 border border-slate-200/80 dark:border-brand-dark-border/80 hover:border-brand-amber/50 dark:hover:border-brand-amber/50 shadow-md hover:shadow-xl transition-all group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-amber-50 dark:bg-brand-amber/10 text-amber-600 dark:text-brand-amber group-hover:scale-110 transition-transform">
+                          <LayoutDashboard className="w-7 h-7" />
+                        </div>
+                        <span className="text-xl" role="img" aria-label="Cashier and kitchen">☕👨‍🍳</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        Cashier &amp; Kitchen Mode
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                        Manage customer orders, generate tokens, process payments, and monitor kitchen status in real time.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSelectStaff}
+                      className="w-full bg-slate-900 dark:bg-brand-amber hover:bg-slate-800 dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
+                    >
+                      <span>Enter Staff Dashboard</span>
+                      <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </motion.div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-brand-dark-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald dark:text-brand-amber" />
+                    Quick role simulation mode enabled
+                  </span>
+                  <span className="hidden sm:inline">Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-[10px] font-mono border border-slate-300 dark:border-white/10">Esc</kbd> to close</span>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
       </div>
   );

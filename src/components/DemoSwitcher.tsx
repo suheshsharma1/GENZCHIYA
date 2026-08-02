@@ -55,13 +55,13 @@ export const DemoSwitcher: React.FC = () => {
       console.error('Failed to set cashier role', err);
     }
     setIsOpen(false);
-    navigate('/admin');
+    navigate('/admin/cashier');
   };
 
   return (
     <>
        {/* Floating Demo Switcher Trigger Button */}
-       <div ref={constraintsRef} className="fixed bottom-6 right-6 z-[9999]">
+        <div ref={constraintsRef} className="fixed bottom-28 sm:bottom-6 right-4 sm:right-[170px] z-[9999]">
          <motion.button
            type="button"
            onClick={() => setIsOpen(true)}
@@ -74,7 +74,7 @@ export const DemoSwitcher: React.FC = () => {
            whileHover={{ scale: 1.05 }}
            whileTap={{ scale: 0.95 }}
            aria-label="Open Demo Mode Switcher"
-           className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-xl glass-light dark:glass-dark bg-white/90 dark:bg-brand-dark-card/90 border border-brand-emerald/20 dark:border-white/10 hover:border-brand-primary/40 dark:hover:border-brand-amber/40 text-brand-text dark:text-white transition-all cursor-pointer group"
+            className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl shadow-brand-emerald/10 dark:shadow-brand-amber/10 glass-light dark:glass-dark bg-white/90 dark:bg-brand-dark-card/90 border border-brand-emerald/20 dark:border-white/10 hover:border-brand-primary/40 dark:hover:border-brand-amber/40 text-brand-text dark:text-white transition-all cursor-pointer group animate-float"
       >
         <span className="relative flex h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary dark:bg-brand-amber opacity-75"></span>
@@ -111,7 +111,7 @@ export const DemoSwitcher: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-3xl glass-light dark:glass-dark bg-white/95 dark:bg-brand-dark-card/95 border border-white/40 dark:border-brand-dark-border shadow-2xl rounded-3xl p-6 sm:p-8 z-10 overflow-hidden"
+              className="relative w-full max-w-3xl glass-light dark:glass-dark bg-white/95 dark:bg-brand-dark-card/95 border border-white/40 dark:border-brand-dark-border shadow-2xl shadow-brand-emerald/5 dark:shadow-brand-amber/5 rounded-3xl p-6 sm:p-8 z-10 overflow-hidden"
             >
               {/* Background Glow Accents */}
               <div className="absolute -top-24 -right-24 w-60 h-60 bg-brand-primary/10 dark:bg-brand-amber/10 rounded-full blur-3xl pointer-events-none" />

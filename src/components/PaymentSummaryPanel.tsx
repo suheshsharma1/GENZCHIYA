@@ -14,7 +14,7 @@ type DateFilter = 'all' | 'today' | 'week' | 'month';
 
 export const PaymentSummaryPanel: React.FC<PaymentSummaryPanelProps> = ({ orders, orderHistory, onClearHistory }) => {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('today');
   const [showFilters, setShowFilters] = useState(false);
 
   const handleClearHistory = () => {

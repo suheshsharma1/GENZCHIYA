@@ -30,7 +30,7 @@ const REVIEW_STATUS_STYLES: Record<string, string> = {
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { orders, orderHistory, products, favorites, activeTable, startNewSession, toggleFavorite, reviews, addReview, updateReview, deleteReview } = useApp();
+  const { orders, orderHistory, products, favorites, activeTable, currentSessionId, startNewSession, toggleFavorite, reviews, addReview, updateReview, deleteReview } = useApp();
 
   const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'reviews'>('history');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'tea' | 'snacks'>('all');
@@ -49,6 +49,9 @@ export const HistoryPage: React.FC = () => {
 
   const allCustomerOrders = Array.from(uniqueMap.values())
     .filter(order => {
+      if (currentSessionId) {
+        return order.sessionId === currentSessionId;
+      }
       if (activeTable) {
         return order.tableNumber === activeTable;
       }
@@ -73,6 +76,7 @@ export const HistoryPage: React.FC = () => {
     addReview({
       orderId,
       tableNumber: order.tableNumber,
+      sessionId: currentSessionId,
       rating,
       comment,
       status: 'submitted',
@@ -164,7 +168,7 @@ export const HistoryPage: React.FC = () => {
             }`}
           >
             <Star size={13} />
-            Reviews ({reviews.filter(r => r.tableNumber === activeTable || !activeTable).length})
+            Reviews ({reviews.filter(r => r.sessionId === currentSessionId || !currentSessionId).length})
           </button>
           <button
             onClick={() => setActiveTab('favorites')}
@@ -457,13 +461,13 @@ export const HistoryPage: React.FC = () => {
             {/* Submitted Reviews */}
             <div className="space-y-3">
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 text-left">Your Reviews</h4>
-              {reviews.filter(r => !activeTable || r.tableNumber === activeTable).length === 0 ? (
+              {                  reviews.filter(r => !currentSessionId || r.sessionId === currentSessionId).length === 0 ? (
                 <div className="text-center py-10 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/60">
                   <Star className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={28} />
                   <p className="text-slate-400 text-xs font-medium">No reviews yet. Complete an order to share your feedback!</p>
                 </div>
               ) : (
-                reviews.filter(r => !activeTable || r.tableNumber === activeTable).map(review => (
+                reviews.filter(r => !currentSessionId || r.sessionId === currentSessionId).map(review => (
                   <div key={review.id} className="bg-white dark:bg-brand-dark-card rounded-2xl shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 overflow-hidden">
                     {editingReviewId === review.id ? (
                       <div className="p-4 space-y-3">
@@ -538,7 +542,7 @@ export const HistoryPage: React.FC = () => {
                     className="bg-white dark:bg-brand-dark-card rounded-xl overflow-hidden border border-brand-sage/5 dark:border-brand-dark-border/40 shadow-sm flex flex-col justify-between"
                   >
                     <div className="relative aspect-video">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       <button
                         onClick={() => toggleFavorite(product.id)}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 dark:bg-brand-dark-bg/85 backdrop-blur-sm text-rose-500 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
