@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserCircle, Heart, ChevronDown, ReceiptText, Crown, PackageSearch, Star, Trash2, Edit3, Send } from 'lucide-react';
+import { ArrowLeft, UserCircle, ChevronDown, ReceiptText, Crown, PackageSearch, Star, Trash2, Edit3, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SVGLogo } from '../components/SVGLogo';
 import { Review } from '../types';
@@ -30,9 +30,8 @@ const REVIEW_STATUS_STYLES: Record<string, string> = {
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { orders, orderHistory, products, favorites, activeTable, currentSessionId, startNewSession, toggleFavorite, reviews, addReview, updateReview, deleteReview } = useApp();
-
-  const [activeTab, setActiveTab] = useState<'history' | 'favorites' | 'reviews'>('history');
+  const { orders, orderHistory, products, activeTable, currentSessionId, startNewSession, reviews, addReview, updateReview, deleteReview } = useApp();
+  const [activeTab, setActiveTab] = useState<'history' | 'reviews'>('history');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'tea' | 'snacks'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [reviewSubmittingId, setReviewSubmittingId] = useState<string | null>(null);
@@ -66,7 +65,7 @@ export const HistoryPage: React.FC = () => {
     return true;
   });
 
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
+  
 
   const getReviewForOrder = (orderId: string) => reviews.find(r => r.orderId === orderId);
 
@@ -170,17 +169,7 @@ export const HistoryPage: React.FC = () => {
             <Star size={13} />
             Reviews ({reviews.filter(r => r.sessionId === currentSessionId || !currentSessionId).length})
           </button>
-          <button
-            onClick={() => setActiveTab('favorites')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              activeTab === 'favorites'
-                ? 'bg-brand-emerald text-white dark:bg-brand-amber dark:text-brand-dark-bg'
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-            }`}
-          >
-            <Heart size={13} />
-            Favorites ({favoriteProducts.length})
-          </button>
+          {/* Favorites tab removed */}
         </div>
 
         {/* Tab 1: Order History */}
@@ -526,49 +515,7 @@ export const HistoryPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Favorites */}
-        {activeTab === 'favorites' && (
-          <div className="space-y-3">
-            {favoriteProducts.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-brand-dark-card rounded-2xl border border-dashed border-slate-200 dark:border-brand-dark-border/60">
-                <Heart className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={32} />
-                <p className="text-slate-400 text-xs font-medium">Your bookmarked items appear here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {favoriteProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white dark:bg-brand-dark-card rounded-xl overflow-hidden border border-brand-sage/5 dark:border-brand-dark-border/40 shadow-sm flex flex-col justify-between"
-                  >
-                    <div className="relative aspect-video">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      <button
-                        onClick={() => toggleFavorite(product.id)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 dark:bg-brand-dark-bg/85 backdrop-blur-sm text-rose-500 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
-                      >
-                        <Heart size={12} fill="#f43f5e" />
-                      </button>
-                    </div>
-
-                    <div className="p-3 text-left space-y-2 flex-1 flex flex-col justify-between">
-                      <h5 className="font-bold text-xs line-clamp-1">{product.name}</h5>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="text-[11px] font-extrabold text-brand-emerald dark:text-brand-amber">Rs. {product.price}</span>
-                        <button
-                          onClick={() => navigate(`/menu?table=${activeTable || '1'}`)}
-                          className="bg-brand-emerald/10 dark:bg-brand-amber/15 text-brand-emerald dark:text-brand-amber font-bold text-[10px] px-2.5 py-1 rounded-lg hover:bg-brand-emerald hover:text-white dark:hover:bg-brand-amber dark:hover:text-brand-dark-bg cursor-pointer transition-colors"
-                        >
-                          Order
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Favorites section removed */}
 
       </main>
       

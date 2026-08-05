@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Heart, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket, Check,
+  Search, ShoppingBag, Plus, Minus, X, Tag, Info, Ticket, Check,
   ChevronRight, Moon, Sun, Clock, User, HeartHandshake, UtensilsCrossed, QrCode,
   Sparkles, ArrowRight, LayoutDashboard, ShieldCheck, Smartphone
 } from 'lucide-react';
@@ -21,9 +21,9 @@ export const MenuPage: React.FC = () => {
   const navigate = useNavigate();
 
   const {
-      products, cart, activeTable, currentOrderId, activeCoupon, couponsList: _couponsList, favorites, 
+      products, cart, activeTable, currentOrderId, activeCoupon, couponsList: _couponsList,
       addToCart, removeFromCart, updateCartQuantity, applyCoupon, removeCoupon, calculateCartPricing,
-      placeOrder, toggleFavorite, setTable, isDarkMode, toggleTheme, startNewSession,
+      placeOrder, setTable, isDarkMode, toggleTheme, startNewSession,
       teaGroupCount, celebrationActive, celebrationMessage, celebrateFreeTea, dismissCelebration, setUserRole
     } = useApp();
 
@@ -472,7 +472,6 @@ export const MenuPage: React.FC = () => {
           ) : (
 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                {filteredProducts.map((product) => {
-                 const isFavorite = favorites.includes(product.id);
                  return (
                    <motion.div
                      layout
@@ -498,22 +497,9 @@ export const MenuPage: React.FC = () => {
                        {/* Gradient overlay */}
                        <div className="absolute inset-0 bg-gradient-to-t from-[#174C3C]/80 via-transparent to-transparent pointer-events-none" />
 
-                       {/* Veg / Non-Veg Tag */}
-                       <span className={`absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded-md text-white shadow-sm backdrop-blur-sm ${
-                         ['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg')
-                           ? 'bg-emerald-600/80'
-                           : 'bg-red-600/80'
-                       }`}>
-                         {['veg', 'tea', 'coffee', 'cold-drinks', 'snacks-fries', 'donuts', 'cookies', 'cake'].includes(product.category) || product.name.toLowerCase().includes('veg') ? 'VEG' : 'NON-VEG'}
-                       </span>
+                       {/* Veg/Non-veg label removed */}
 
-                       {/* Favorite Button */}
-                       <button
-                         onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-                         className="absolute top-3 right-3 p-2 rounded-full bg-white/20 backdrop-blur-md shadow-sm hover:scale-110 active:scale-95 transition-all text-white cursor-pointer"
-                       >
-                         <Heart size={14} fill={isFavorite ? '#f43f5e' : 'none'} />
-                       </button>
+                       {/* Favorite removed */}
 
                        {/* Out of Stock Overlay */}
                        {!product.available && (
