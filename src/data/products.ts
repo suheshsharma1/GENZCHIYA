@@ -1,92 +1,7 @@
 import { Product } from '../types';
 
-// Customization presets
-const teaCustomizations = [
-  {
-    name: "Sugar Level",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Regular Sugar", price: 0 },
-      { name: "Less Sugar", price: 0 },
-      { name: "No Sugar", price: 0 },
-      { name: "Extra Sugar", price: 10 }
-    ]
-  },
-  {
-    name: "Milk Preference",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Whole Milk", price: 0 },
-      { name: "Oat Milk", price: 20 },
-      { name: "Soy Milk", price: 15 },
-      { name: "Black / No Milk", price: 0 }
-    ]
-  }
-];
-
-const coffeeCustomizations = [
-  {
-    name: "Sugar Level",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Regular Sugar", price: 0 },
-      { name: "Less Sugar", price: 0 },
-      { name: "No Sugar", price: 0 }
-    ]
-  },
-  {
-    name: "Milk Preference",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Whole Milk", price: 0 },
-      { name: "Oat Milk", price: 20 },
-      { name: "Soy Milk", price: 15 },
-      { name: "Almond Milk", price: 20 },
-      { name: "Black / No Milk", price: 0 }
-    ]
-  },
-  {
-    name: "Add-ons",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Extra Espresso Shot", price: 30 },
-      { name: "Whipped Cream", price: 20 },
-      { name: "Vanilla Syrup", price: 15 },
-      { name: "Caramel Drizzle", price: 15 }
-    ]
-  }
-];
-
-const coldDrinkCustomizations = [
-  {
-    name: "Ice Level",
-    required: true,
-    type: "select" as const,
-    options: [
-      { name: "Regular Ice", price: 0 },
-      { name: "Less Ice", price: 0 },
-      { name: "No Ice", price: 0 }
-    ]
-  },
-  {
-    name: "Add-ons",
-    required: false,
-    type: "multiple" as const,
-    options: [
-      { name: "Tapioca Pearls (Boba)", price: 30 },
-      { name: "Whipped Cream", price: 20 },
-      { name: "Mango Popping Boba", price: 30 }
-    ]
-  }
-];
-
 export const products: Product[] = [
-  // CATEGORY: TEA
+  // ===================== TEA =====================
   {
     id: "tea-01",
     name: "Milk Tea",
@@ -96,7 +11,38 @@ export const products: Product[] = [
     image: "/images/products/Milk Tea.jpg",
     available: true,
     featured: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "Less Sugar", price: 0 },
+          { name: "No Sugar", price: 0 },
+          { name: "Extra Sugar", price: 10 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 },
+          { name: "Soy Milk", price: 15 }
+        ]
+      },
+      {
+        name: "Tea Strength",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Brew", price: 0 },
+          { name: "Strong Brew", price: 5 }
+        ]
+      }
+    ],
     preparationTime: 5
   },
   {
@@ -107,7 +53,26 @@ export const products: Product[] = [
     category: "tea",
     image: "/images/products/Black Tea.jpg",
     available: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Tea Strength",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Brew", price: 0 },
+          { name: "Strong Brew", price: 5 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -118,7 +83,26 @@ export const products: Product[] = [
     category: "tea",
     image: "/images/products/Green Tea.jpg",
     available: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sweetness Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "No Sugar", price: 0 },
+          { name: "Honey Instead", price: 10 }
+        ]
+      },
+      {
+        name: "Add-ons",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Lemon Slice", price: 5 },
+          { name: "Mint Leaves", price: 5 }
+        ]
+      }
+    ],
     preparationTime: 4
   },
   {
@@ -129,7 +113,27 @@ export const products: Product[] = [
     category: "tea",
     image: "/images/products/Lemon Tea.jpg",
     available: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 },
+          { name: "Honey Instead", price: 10 }
+        ]
+      },
+      {
+        name: "Lemon Intensity",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Lemon", price: 0 },
+          { name: "Extra Lemon", price: 5 }
+        ]
+      }
+    ],
     preparationTime: 4
   },
   {
@@ -140,7 +144,27 @@ export const products: Product[] = [
     category: "tea",
     image: "/images/products/Ginger Tea.jpg",
     available: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 },
+          { name: "Honey Instead", price: 10 }
+        ]
+      },
+      {
+        name: "Ginger Intensity",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Ginger", price: 0 },
+          { name: "Extra Ginger", price: 10 }
+        ]
+      }
+    ],
     preparationTime: 5
   },
   {
@@ -152,7 +176,36 @@ export const products: Product[] = [
     image: "/images/products/Masala Tea.jpg",
     available: true,
     featured: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "Less Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 }
+        ]
+      },
+      {
+        name: "Spice Level",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Spice", price: 0 },
+          { name: "Extra Masala", price: 10 }
+        ]
+      }
+    ],
     preparationTime: 6
   },
   {
@@ -163,7 +216,26 @@ export const products: Product[] = [
     category: "tea",
     image: "/images/products/Honey Lemon Tea.jpg",
     available: true,
-    customizations: teaCustomizations,
+    customizations: [
+      {
+        name: "Honey Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Honey", price: 0 },
+          { name: "Extra Honey", price: 15 }
+        ]
+      },
+      {
+        name: "Lemon Intensity",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Lemon", price: 0 },
+          { name: "Extra Lemon", price: 5 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -179,7 +251,7 @@ export const products: Product[] = [
       {
         name: "Sugar Level",
         required: true,
-        type: "select" as const,
+        type: "select",
         options: [
           { name: "Regular Sugar", price: 0 },
           { name: "Less Sugar", price: 0 },
@@ -190,7 +262,7 @@ export const products: Product[] = [
       {
         name: "Milk Preference",
         required: true,
-        type: "select" as const,
+        type: "select",
         options: [
           { name: "Whole Milk (Classic)", price: 0 },
           { name: "Buffalo Milk (Richer)", price: 20 },
@@ -201,7 +273,7 @@ export const products: Product[] = [
       {
         name: "Matka Add-ons",
         required: false,
-        type: "multiple" as const,
+        type: "multiple",
         options: [
           { name: "Extra Cardamom", price: 10 },
           { name: "Saffron Touch", price: 30 },
@@ -213,7 +285,7 @@ export const products: Product[] = [
     preparationTime: 8
   },
 
-  // CATEGORY: COFFEE
+  // ===================== COFFEE =====================
   {
     id: "coffee-01",
     name: "Black Coffee",
@@ -222,7 +294,25 @@ export const products: Product[] = [
     category: "coffee",
     image: "/images/products/Black Coffee.jpg",
     available: true,
-    customizations: coffeeCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Add-ons",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Extra Espresso Shot", price: 30 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -233,7 +323,28 @@ export const products: Product[] = [
     category: "coffee",
     image: "/images/products/Milk Coffee.jpg",
     available: true,
-    customizations: coffeeCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "Less Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 },
+          { name: "Soy Milk", price: 15 }
+        ]
+      }
+    ],
     preparationTime: 4
   },
   {
@@ -244,7 +355,36 @@ export const products: Product[] = [
     category: "coffee",
     image: "/images/products/Cappuccin.jpg",
     available: true,
-    customizations: coffeeCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 },
+          { name: "Almond Milk", price: 20 }
+        ]
+      },
+      {
+        name: "Foam Level",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Foam", price: 0 },
+          { name: "Extra Foam", price: 10 }
+        ]
+      }
+    ],
     preparationTime: 5
   },
   {
@@ -256,7 +396,38 @@ export const products: Product[] = [
     image: "/images/products/Latt.jpg",
     available: true,
     featured: true,
-    customizations: coffeeCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 },
+          { name: "Soy Milk", price: 15 },
+          { name: "Almond Milk", price: 20 }
+        ]
+      },
+      {
+        name: "Flavor Syrup",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Vanilla Syrup", price: 15 },
+          { name: "Caramel Drizzle", price: 15 },
+          { name: "Hazelnut Syrup", price: 15 }
+        ]
+      }
+    ],
     preparationTime: 5
   },
   {
@@ -267,7 +438,44 @@ export const products: Product[] = [
     category: "coffee",
     image: "/images/products/Cappuccin.jpg",
     available: true,
-    customizations: coffeeCustomizations,
+    customizations: [
+      {
+        name: "Sugar Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Sugar", price: 0 },
+          { name: "No Sugar", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 }
+        ]
+      },
+      {
+        name: "Chocolate Intensity",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Chocolate", price: 0 },
+          { name: "Extra Dark Chocolate", price: 20 }
+        ]
+      },
+      {
+        name: "Add-ons",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Whipped Cream", price: 20 },
+          { name: "Cocoa Shavings", price: 10 }
+        ]
+      }
+    ],
     preparationTime: 6
   },
   {
@@ -278,11 +486,40 @@ export const products: Product[] = [
     category: "coffee",
     image: "/images/products/Cold Coffee.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Milk Preference",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Whole Milk", price: 0 },
+          { name: "Oat Milk", price: 20 }
+        ]
+      },
+      {
+        name: "Add-ons",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Whipped Cream", price: 20 },
+          { name: "Extra Espresso Shot", price: 30 }
+        ]
+      }
+    ],
     preparationTime: 4
   },
 
-  // CATEGORY: COLD DRINKS
+  // ===================== COLD DRINKS =====================
   {
     id: "cold-01",
     name: "Iced Tea",
@@ -291,7 +528,37 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Lemon Tea.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Sweetness Level",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Sweet", price: 0 },
+          { name: "Less Sweet", price: 0 },
+          { name: "Unsweetened", price: 0 }
+        ]
+      },
+      {
+        name: "Add-ons",
+        required: false,
+        type: "multiple",
+        options: [
+          { name: "Tapioca Pearls (Boba)", price: 30 },
+          { name: "Mango Popping Boba", price: 30 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -302,7 +569,28 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Lemon Soda.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Sweet or Salty",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Sweet", price: 0 },
+          { name: "Salty", price: 0 },
+          { name: "Sweet & Salty Mix", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 2
   },
   {
@@ -313,7 +601,27 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Fresh Lime.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Sweet or Salty",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Sweet", price: 0 },
+          { name: "Salty", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 2
   },
   {
@@ -325,7 +633,27 @@ export const products: Product[] = [
     image: "/images/products/Mango Juice.jpg",
     available: true,
     featured: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Pulp Level",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Pulp", price: 0 },
+          { name: "Extra Pulp", price: 10 },
+          { name: "No Pulp", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -336,7 +664,26 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Orange Juice.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      },
+      {
+        name: "Pulp Level",
+        required: false,
+        type: "select",
+        options: [
+          { name: "Regular Pulp", price: 0 },
+          { name: "No Pulp", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 3
   },
   {
@@ -347,6 +694,7 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Mineral Water.jpg",
     available: true,
+    // Bottled item — intentionally no customizations
     preparationTime: 1
   },
   {
@@ -357,7 +705,18 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Coca-Cola.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 1
   },
   {
@@ -368,7 +727,18 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Pepsi.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 1
   },
   {
@@ -377,9 +747,20 @@ export const products: Product[] = [
     description: "Orange-flavoured Fanta served cold.",
     price: 80,
     category: "cold-drinks",
-    image: "/images/products/Fanta.jpg",
+    image: "/images/products/fantas.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 1
   },
   {
@@ -388,9 +769,20 @@ export const products: Product[] = [
     description: "Crisp lemon-lime Sprite served chilled.",
     price: 80,
     category: "cold-drinks",
-    image: "/images/products/Sprite.jpg",
+    image: "/images/products/Sprite-.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 1
   },
   {
@@ -401,7 +793,18 @@ export const products: Product[] = [
     category: "cold-drinks",
     image: "/images/products/Mountain Dew.jpg",
     available: true,
-    customizations: coldDrinkCustomizations,
+    customizations: [
+      {
+        name: "Ice Level",
+        required: true,
+        type: "select",
+        options: [
+          { name: "Regular Ice", price: 0 },
+          { name: "Less Ice", price: 0 },
+          { name: "No Ice", price: 0 }
+        ]
+      }
+    ],
     preparationTime: 1
   }
 ];
