@@ -1,164 +1,213 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Coffee, Smartphone, Table, Zap, CreditCard, LayoutDashboard,
-  ArrowRight
+  Coffee, Smartphone, Zap, ShieldCheck, Clock,
+  Sparkles, CheckCircle2, Heart, Flame
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
-const features = [
+const steps = [
   {
-    icon: Coffee,
-    title: 'Digital Menu',
-    description: 'Browse the complete tea menu digitally.',
-    color: 'brand-emerald',
-  },
-  {
+    step: '01',
     icon: Smartphone,
-    title: 'QR Table Ordering',
-    description: 'Scan the table QR to begin ordering instantly.',
-    color: 'brand-amber',
+    title: 'Scan or Select Table',
+    subtitle: 'Table QR / Manual Selection',
+    description: 'Scan the QR code on your café table using your phone camera, or choose your table number manually in seconds.',
+    color: 'from-amber-500 to-orange-500',
+    badge: 'Step 1'
   },
   {
-    icon: Table,
-    title: 'Manual Table Selection',
-    description: 'Customers can also choose their table manually.',
-    color: 'brand-sage',
+    step: '02',
+    icon: Coffee,
+    title: 'Customize Your Drink',
+    subtitle: 'Sugar, Milk & Flavoring Options',
+    description: 'Browse our full digital menu. Pick your favorite Matka Chai, Coffee, or Cold Drink, and customize your sugar, milk & add-ons.',
+    color: 'from-brand-primary to-rose-600',
+    badge: 'Step 2'
   },
   {
+    step: '03',
     icon: Zap,
-    title: 'Fast Order Processing',
-    description: 'Orders are sent instantly to the cashier.',
-    color: 'brand-emerald',
-  },
-  {
-    icon: CreditCard,
-    title: 'Digital Payment Ready',
-    description: 'Supports future integration with digital payment systems.',
-    color: 'brand-amber',
-  },
-  {
-    icon: LayoutDashboard,
-    title: 'Staff Dashboard',
-    description: 'Manage orders, tables, and menu items efficiently.',
-    color: 'brand-sage',
-  },
+    title: 'Instant Kitchen Prep',
+    subtitle: 'Zero Queue & Freshly Served',
+    description: 'Your order is sent directly to the kitchen display screen instantly. Sit back and enjoy as fresh piping hot tea arrives at your table!',
+    color: 'from-emerald-500 to-teal-600',
+    badge: 'Step 3'
+  }
 ];
 
-const stats = [
-  { value: '10+', label: 'Cafe Tables' },
-  { value: '20+', label: 'Tea Menu Items' },
-  { value: '500+', label: 'Happy Customers' },
-  { value: '1000+', label: 'Orders Served' },
+const highlights = [
+  {
+    icon: Clock,
+    title: 'Zero Waiting Queue',
+    description: 'Order directly from your seat without standing in long cashier lines.',
+    tag: 'Convenience'
+  },
+  {
+    icon: Flame,
+    title: 'Authentic Matka Tea',
+    description: 'Slow-brewed chai cooked in traditional earthen clay pots for rich flavor.',
+    tag: 'Signature'
+  },
+  {
+    icon: CheckCircle2,
+    title: '100% Accurate Orders',
+    description: 'Custom sugar & milk choices go straight to the barista with zero communication mix-ups.',
+    tag: 'Quality'
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Contactless & Safe',
+    description: 'Modern digital ordering experience designed for speed, hygiene and convenience.',
+    tag: 'Safety'
+  },
+  {
+    icon: Sparkles,
+    title: 'Live Order Tracking',
+    description: 'Track your tea status in real-time — from kitchen prep to table serving.',
+    tag: 'Smart Tech'
+  },
+  {
+    icon: Heart,
+    title: 'Nepalese Hospitality',
+    description: 'Warm, cozy atmosphere paired with modern smart technology.',
+    tag: 'Experience'
+  }
 ];
 
 export const AboutSection: React.FC = () => {
-  const navigate = useNavigate();
-
   return (
-    <section id="about" className="relative bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300 py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-center max-w-3xl mx-auto mb-16"
-        >
-          <span className="text-[10px] font-black text-brand-emerald uppercase tracking-[0.3em]">
-            About GENZCHIYA
+    <section id="about" className="relative py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+
+      {/* Decorative ambient background glows */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-brand-emerald/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-3xl mx-auto mb-16 relative"
+      >
+        <div className="inline-flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs font-extrabold px-4 py-1.5 rounded-full mb-4 uppercase tracking-widest">
+          <Sparkles size={14} />
+          About GENZCHIYA
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+          Smart Tea Café{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-rose-500 to-amber-500">
+            Ordering Experience
           </span>
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white mt-3 font-brand-serif">
-            Smart Tea Café Ordering System
+        </h1>
+        <p className="mt-4 text-base text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+          GENZCHIYA is Nepal’s premier smart tea café system. We blend authentic traditional chai culture with modern QR technology — giving you zero wait time, effortless order customization, and instant service straight to your table.
+        </p>
+      </motion.div>
+
+      {/* ── Section 1: How It Works (3 Steps) ── */}
+      <div className="mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-10"
+        >
+          <span className="text-xs font-black text-brand-emerald dark:text-brand-amber uppercase tracking-[0.25em]">
+            Simple &amp; Fast Process
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+            How Ordering Works in 3 Easy Steps
           </h2>
-          <p className="mt-6 text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
-            GENZCHIYA is a smart tea café ordering platform designed to simplify the customer experience.
-            Customers can scan a table QR code or select their table manually, browse the digital menu,
-            customize their tea, and place orders without waiting in queues. The system helps cafés reduce
-            ordering errors, improve service speed, and deliver a modern contactless dining experience.
-          </p>
         </motion.div>
 
-        {/* Feature Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-20"
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, ease: 'easeOut', delay: 0.15 * index }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className="group relative bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40 hover:shadow-md hover:border-brand-emerald/20 dark:hover:border-brand-amber/20 transition-all duration-300 cursor-default"
-            >
-              <div className={`w-12 h-12 rounded-xl bg-${feature.color}/10 dark:bg-${feature.color}/15 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                <feature.icon size={22} className={`text-${feature.color} dark:text-${feature.color}`} />
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-800 dark:text-white tracking-tight">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Statistics Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
-          className="bg-white dark:bg-brand-dark-card rounded-3xl p-8 md:p-12 shadow-sm border border-brand-sage/5 dark:border-brand-dark-border/40"
-        >
-          <h3 className="text-center text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 mb-10">
-            Our Impact
-          </h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+          {steps.map((stepItem, idx) => {
+            const Icon = stepItem.icon;
+            return (
               <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.4 + index * 0.1 }}
-                className="text-center"
+                key={stepItem.step}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.15 }}
+                whileHover={{ y: -6 }}
+                className="relative bg-white dark:bg-brand-dark-card rounded-3xl p-7 border border-slate-200/80 dark:border-brand-dark-border shadow-sm hover:shadow-xl transition-all duration-300 group"
               >
-                <div className="text-4xl sm:text-5xl font-black text-brand-emerald dark:text-brand-amber font-brand-serif tracking-tight">
-                  {stat.value}
+                {/* Step badge */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className={`w-13 h-13 rounded-2xl bg-gradient-to-br ${stepItem.color} text-white flex items-center justify-center shadow-lg shadow-black/10 group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon size={24} />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
+                    {stepItem.badge}
+                  </span>
                 </div>
-                <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {stat.label}
+
+                <span className="text-xs font-extrabold text-brand-primary uppercase tracking-wider block mb-1">
+                  {stepItem.subtitle}
+                </span>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">
+                  {stepItem.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                  {stepItem.description}
                 </p>
               </motion.div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Section 2: Why Choose GENZCHIYA ── */}
+      <div className="mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-10"
+        >
+          <span className="text-xs font-black text-brand-primary uppercase tracking-[0.25em]">
+            Why GENZCHIYA?
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+            Built for Chai Lovers &amp; Modern Cafés
+          </h2>
         </motion.div>
 
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.6 }}
-          className="text-center mt-12"
-        >
-          <button
-            onClick={() => navigate('/menu')}
-            className="inline-flex items-center gap-2 bg-brand-emerald hover:bg-brand-sage dark:bg-brand-amber dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 px-8 rounded-2xl text-xs uppercase tracking-widest shadow-lg shadow-brand-emerald/20 dark:shadow-brand-amber/20 hover:shadow-xl transition-all duration-300 cursor-pointer"
-          >
-            <span>Start Ordering</span>
-            <ArrowRight size={16} />
-          </button>
-        </motion.div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {highlights.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: idx * 0.08 }}
+                whileHover={{ y: -4 }}
+                className="bg-white dark:bg-brand-dark-card rounded-2xl p-6 border border-slate-100 dark:border-brand-dark-border shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary flex items-center justify-center">
+                      <Icon size={20} />
+                    </div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+                      {item.tag}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white mb-1.5">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                    {item.description}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

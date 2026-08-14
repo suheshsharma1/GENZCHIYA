@@ -12,6 +12,7 @@ import QRCode from 'qrcode';
 import { QRScanner } from '../scanner/QRScanner';
 import { SaturdayOfferBanner } from './SaturdayOfferBanner';
 
+
 export const HeroSection: React.FC = () => {
   const navigate = useNavigate();
   const { setTable, lockTable, getTableStatus, getTableOrderId, getTableOccupiedAt, totalTables = 20 } = useApp();
@@ -136,15 +137,28 @@ export const HeroSection: React.FC = () => {
         <div className="absolute top-1/3 -left-32 w-[550px] h-[550px] bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08] rounded-full blur-[140px]" />
         <div className="absolute -bottom-20 right-1/4 w-[500px] h-[500px] bg-brand-primary/[0.03] rounded-full blur-[130px]" />
 
-        {/* Minimal floating café texture icons */}
-        <div className="absolute top-36 left-12 opacity-[0.03] dark:opacity-[0.06] transform -rotate-12">
-          <Coffee size={140} />
+        {/* Real tea cup images as ambient background decorations */}
+        {/* Left: Matka Chai image — softly transparent, slightly rotated */}
+        <div className="absolute top-24 -left-10 sm:left-0 lg:left-6 opacity-[0.12] dark:opacity-[0.18] transform -rotate-12 pointer-events-none transition-opacity duration-500">
+          <img
+            src="/images/matka_chai.png"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="w-[260px] sm:w-[320px] lg:w-[380px] h-auto object-contain select-none"
+            style={{ filter: 'saturate(0.7) brightness(0.95)' }}
+          />
         </div>
-        <div className="absolute bottom-28 right-16 opacity-[0.03] dark:opacity-[0.06] transform rotate-12">
-          <UtensilsCrossed size={160} />
-        </div>
-        <div className="absolute top-1/2 right-1/3 opacity-[0.02] dark:opacity-[0.04]">
-          <UtensilsCrossed size={180} />
+        {/* Right: Masala Tea — soft warm accent on right side */}
+        <div className="absolute bottom-20 right-0 lg:right-8 opacity-[0.08] dark:opacity-[0.13] transform rotate-12 pointer-events-none transition-opacity duration-500">
+          <img
+            src="/images/products/Masala Tea.jpg"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="w-[180px] sm:w-[220px] lg:w-[260px] h-auto object-contain rounded-3xl select-none"
+            style={{ filter: 'saturate(0.6) brightness(0.9)' }}
+          />
         </div>
       </div>
 

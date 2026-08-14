@@ -3,31 +3,24 @@ import { motion } from 'framer-motion';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { SVGLogo } from '../SVGLogo';
 import { useApp } from '../../context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const navLinks = [
-  { label: 'Home', href: '#home' },
-  { label: 'About', href: '/about#about' },
-  { label: 'Contact', href: '/about#contact' },
+  { label: 'Home', href: '/' },
+  { label: 'About', href: '/about' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { isDarkMode, toggleTheme } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleNavClick = (href: string) => {
-    if (href.startsWith('/')) {
-      const [path, hash] = href.split('#');
-      navigate(path);
-      if (hash) {
-        setTimeout(() => {
-          document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
-    } else {
-      document.getElementById(href.replace('#', ''))?.scrollIntoView({ behavior: 'smooth' });
-    }
+    navigate(href);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -58,15 +51,22 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <button
-                key={link.label}
-                onClick={() => handleNavClick(link.href)}
-                className="text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:text-brand-primary dark:hover:text-brand-primary transition-colors duration-200"
-              >
-                {link.label}
-              </button>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.href;
+              return (
+                <button
+                  key={link.label}
+                  onClick={() => handleNavClick(link.href)}
+                  className={`text-xs font-bold uppercase tracking-widest transition-colors duration-200 ${
+                    isActive
+                      ? 'text-brand-primary font-black'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-brand-primary dark:hover:text-brand-primary'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Right Actions */}
@@ -107,18 +107,25 @@ export const Navbar: React.FC = () => {
                 : 'bg-white/80 shadow-black/5 border-white/30'
             }`}
           >
-            {navLinks.map((link) => (
-              <button
-                key={link.label}
-                onClick={() => {
-                  setIsOpen(false);
-                  handleNavClick(link.href);
-                }}
-                className="block w-full text-left py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-brand-primary dark:hover:text-brand-primary transition-colors"
-              >
-                {link.label}
-              </button>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.href;
+              return (
+                <button
+                  key={link.label}
+                  onClick={() => {
+                    setIsOpen(false);
+                    handleNavClick(link.href);
+                  }}
+                  className={`block w-full text-left py-2.5 text-sm font-bold transition-colors ${
+                    isActive
+                      ? 'text-brand-primary font-black'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-brand-primary'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              );
+            })}
 
             <div className="border-t border-gray-200 dark:border-brand-dark-border mt-3 pt-3 flex items-center justify-between">
               <button

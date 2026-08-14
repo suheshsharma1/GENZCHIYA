@@ -19,6 +19,8 @@ const AppErrorToast: React.FC = () => {
 // Pages
 import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
+import GalleryPage from './pages/GalleryPage';
+import ContactPage from './pages/ContactPage';
 import MenuPage from './pages/MenuPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import HistoryPage from './pages/HistoryPage';
@@ -71,6 +73,8 @@ export const App: React.FC = () => {
           {/* Customer Facing Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/gallery" element={<GalleryPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/tracking" element={<OrderTrackingPage />} />
           <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />

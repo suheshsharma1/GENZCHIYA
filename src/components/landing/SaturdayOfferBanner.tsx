@@ -1,29 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Calendar, Sparkles, Flame, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-
+import { motion } from 'framer-motion';
+import { Clock, Check, Star, Gift, Sparkles } from 'lucide-react';
 
 export const SaturdayOfferBanner: React.FC = () => {
-  const navigate = useNavigate();
-  const [isVisible, setIsVisible] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({ hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
   const [isSaturday, setIsSaturday] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Check Saturday status & calculate countdown
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
       const day = now.getDay();
-      setIsSaturday(day === 6);
+      const saturday = day === 6;
+      setIsSaturday(saturday);
 
-      if (day === 6) {
+      if (saturday) {
         const endOfSaturday = new Date(now);
         endOfSaturday.setHours(20, 0, 0, 0);
         if (now > endOfSaturday) {
@@ -52,96 +46,200 @@ export const SaturdayOfferBanner: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="relative w-full max-w-7xl mx-auto mb-6"
-    >
+    <div className="w-full max-w-7xl mx-auto space-y-6 my-8 px-4 sm:px-6">
+      {/* ─────────────────────────────────────────────────────────────
+          OFFER CARD 1: SATURDAY SPECIAL (30% OFF ALL TEAS)
+          ───────────────────────────────────────────────────────────── */}
       <motion.div
-        animate={{ y: [0, -4, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_15px_40px_-10px_rgba(180,20,40,0.35)] border border-white/20"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="relative bg-gradient-to-r from-[#FFF0F2] via-[#FDF2F4] to-[#FFF5F6] dark:from-[#2A1215] dark:via-[#1F0E10] dark:to-[#2D1418] border border-rose-200/80 dark:border-rose-900/40 rounded-3xl shadow-lg shadow-rose-900/5 overflow-hidden flex flex-col md:flex-row items-center justify-between"
       >
-        {/* Compact Crimson & Velvet Background */}
-        <div className="relative bg-gradient-to-r from-[#7A0617] via-[#B8162F] to-[#590410] overflow-hidden p-4 sm:p-6 lg:py-5 lg:px-8">
+        {/* Left Side: Product Feature Image with Curved Backdrop */}
+        <div className="relative w-full md:w-1/4 h-48 md:h-56 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gradient-to-tr from-rose-200/60 to-rose-100/30 dark:from-rose-900/30 dark:to-rose-950/20 md:rounded-r-[100px] rounded-b-[60px] md:rounded-b-none pointer-events-none" />
+          <div className="relative z-10 w-36 h-36 md:w-44 md:h-44 group">
+            <img
+              src="/images/products/Matka Tea.png"
+              alt="GENZCHIYA Matka Tea"
+              className="w-full h-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/images/products/Milk Tea.jpg';
+              }}
+            />
+            <div className="absolute -bottom-1 -right-1 bg-white/90 dark:bg-brand-dark-card/90 backdrop-blur-md border border-rose-200 text-[10px] font-black text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full shadow-sm">
+              Matka Chai
+            </div>
+          </div>
+        </div>
 
-          {/* Ambient Lighting */}
-          <div className="absolute top-0 right-0 w-[350px] h-[350px] bg-amber-400/15 rounded-full blur-[90px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-rose-500/20 rounded-full blur-[80px] pointer-events-none" />
+        {/* Middle Content Section */}
+        <div className="flex-1 p-6 text-center md:text-left space-y-3 z-10">
+          <div className="inline-flex items-center gap-1.5 bg-[#B8162F] text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
+            <Star size={11} className="fill-white" />
+            <span>SATURDAY SPECIAL</span>
+          </div>
 
-          {/* Grid Overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-black/20 opacity-30 pointer-events-none" />
+          <div>
+            <h3 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-brand-serif leading-none">
+              30% OFF <span className="text-[#B8162F] dark:text-rose-400">ALL TEAS</span>
+            </h3>
+          </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span>Every Saturday</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+              <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black">✓</span>
+              Auto Applied
+            </span>
+          </div>
+        </div>
 
-            {/* Left Content Side */}
-            <div className="flex-1 text-center md:text-left">
-
-              {/* Status Header Badges */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                <div className="inline-flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/40 rounded-full px-3 py-0.5 backdrop-blur-md shadow-sm">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300"></span>
-                  </span>
-                  <Sparkles size={11} className="text-amber-300" />
-                  <span className="text-amber-200 text-[10px] font-black uppercase tracking-[0.15em]">
-                    {isSaturday ? '🔥 LIVE SATURDAY EXCLUSIVE' : '✨ SATURDAY OFFER'}
-                  </span>
-                </div>
-
-                {/* Countdown */}
-                <div className="inline-flex items-center gap-1 bg-black/40 border border-white/10 rounded-full px-2.5 py-0.5 text-white/90 text-[11px] font-mono backdrop-blur-md">
-                  <Clock size={11} className="text-amber-400" />
-                  <span>
-                    {isSaturday ? 'Ends:' : 'Starts:'} {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
-                  </span>
-                </div>
-              </div>
-
-              {/* Compact Headline & Discount line */}
-              <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-2 sm:gap-3 mb-2">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
-                  SATURDAY <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-400">SPECIAL</span>
-                </h2>
-                <div className="flex items-center gap-2 bg-black/20 border border-amber-300/30 rounded-xl px-3 py-1">
-                  <span className="text-2xl sm:text-3xl font-black text-amber-300 font-brand-serif leading-none">
-                    30% OFF
-                  </span>
-                  <span className="text-white/90 text-[11px] font-extrabold uppercase tracking-wider">
-                    ALL TEAS
-                  </span>
-                </div>
-              </div>
-
-              {/* Feature Chips Row */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80">
-                  <Calendar size={11} className="text-amber-300" /> Every Saturday
-                </span>
-                <span className="text-white/40">•</span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80">
-                  <Flame size={11} className="text-amber-300" /> Auto Applied
-                </span>
-                <span className="text-white/40">•</span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80">
-                  <ShieldCheck size={11} className="text-amber-300" /> Dine-In & Takeaway
-                </span>
-              </div>
-
-
-
+        {/* Right Side: Countdown Timer & Accent Image */}
+        <div className="w-full md:w-auto p-6 flex flex-col sm:flex-row items-center gap-6 justify-center md:justify-end z-10">
+          {/* Live Countdown Box */}
+          <div className="bg-white/90 dark:bg-brand-dark-card/90 backdrop-blur-md border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 shadow-sm text-center min-w-[210px]">
+            <div className="flex items-center justify-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-2">
+              <Clock size={12} className="text-[#B8162F] dark:text-rose-400" />
+              <span>{isSaturday ? 'OFFER ENDS IN' : 'OFFER STARTS IN'}</span>
             </div>
 
+            <div className="flex items-center justify-center gap-2 font-mono text-slate-900 dark:text-white">
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-black text-[#B8162F] dark:text-rose-400">
+                  {String(timeLeft.hours).padStart(2, '0')}h
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">Hours</span>
+              </div>
+              <span className="text-xl font-bold text-slate-300 dark:text-slate-600 -mt-3">:</span>
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-black text-[#B8162F] dark:text-rose-400">
+                  {String(timeLeft.minutes).padStart(2, '0')}m
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">Minutes</span>
+              </div>
+              <span className="text-xl font-bold text-slate-300 dark:text-slate-600 -mt-3">:</span>
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-black text-[#B8162F] dark:text-rose-400">
+                  {String(timeLeft.seconds).padStart(2, '0')}s
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">Seconds</span>
+              </div>
+            </div>
+          </div>
 
-
+          {/* Secondary Product Accent Image */}
+          <div className="hidden lg:block relative w-28 h-28 shrink-0">
+            <img
+              src="/images/products/Lemon Tea.jpg"
+              alt="Lemon Tea"
+              className="w-full h-full object-cover rounded-2xl shadow-md border-2 border-white dark:border-brand-dark-border transform rotate-3 hover:rotate-0 transition-transform"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/images/products/Green Tea.jpg';
+              }}
+            />
           </div>
         </div>
       </motion.div>
-    </motion.div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          OFFER CARD 2: SPECIAL OFFER (BUY 5 GET 1 FREE)
+          ───────────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="relative bg-gradient-to-r from-[#FFFBEF] via-[#FFFDF5] to-[#FFF8E7] dark:from-[#2B2312] dark:via-[#1F190B] dark:to-[#2D240E] border border-amber-200/80 dark:border-amber-900/40 rounded-3xl shadow-lg shadow-amber-900/5 overflow-hidden flex flex-col md:flex-row items-center justify-between"
+      >
+        {/* Left Side: Product Spread Image */}
+        <div className="relative w-full md:w-1/4 h-48 md:h-56 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gradient-to-tr from-amber-200/60 to-amber-100/30 dark:from-amber-900/30 dark:to-amber-950/20 md:rounded-r-[100px] rounded-b-[60px] md:rounded-b-none pointer-events-none" />
+          <div className="relative z-10 w-36 h-36 md:w-44 md:h-44 group">
+            <img
+              src="/images/matka_chai.png"
+              alt="GENZCHIYA Special Spread"
+              className="w-full h-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/images/products/Masala Tea.jpg';
+              }}
+            />
+            <div className="absolute -bottom-1 -left-1 bg-white/90 dark:bg-brand-dark-card/90 backdrop-blur-md border border-amber-200 text-[10px] font-black text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full shadow-sm">
+              Organic Selection
+            </div>
+          </div>
+        </div>
+
+        {/* Middle Content Section */}
+        <div className="flex-1 p-6 text-center md:text-left space-y-3 z-10">
+          <div className="inline-flex items-center gap-1.5 bg-[#D4A055] text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
+            <Gift size={12} className="fill-white" />
+            <span>SPECIAL OFFER</span>
+          </div>
+
+          <div>
+            <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white font-brand-serif leading-tight">
+              Buy 5 cups of the same item, <span className="text-[#D97706] dark:text-amber-400">get 1 FREE</span>
+            </h3>
+          </div>
+
+          <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span>Everyday deal</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+              <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black">✓</span>
+              Auto Applied in cart
+            </span>
+          </div>
+        </div>
+
+        {/* Right Side: 5 Cups + 1 FREE Visualization */}
+        <div className="w-full md:w-auto p-6 flex flex-col items-center md:items-end justify-center z-10">
+          {/* Auto Applied Tag */}
+          <div className="mb-3 inline-flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/60 border border-amber-300/80 dark:border-amber-800/80 text-amber-900 dark:text-amber-300 text-xs font-extrabold px-3 py-1 rounded-full shadow-xs">
+            <Sparkles size={12} className="text-amber-600" />
+            <span>AUTO APPLIED</span>
+          </div>
+
+          {/* 5 Cups + 1 Free Cup Line-Up */}
+          <div className="flex items-center gap-1.5 bg-white/80 dark:bg-brand-dark-card/80 backdrop-blur-sm border border-amber-200/80 dark:border-amber-900/50 p-2.5 rounded-2xl shadow-sm">
+            {/* 5 Purchased Cups */}
+            <div className="flex items-center -space-x-2 sm:space-x-1">
+              {[1, 2, 3, 4, 5].map((num) => (
+                <div key={num} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-white dark:border-brand-dark-border shadow-xs shrink-0 bg-amber-50">
+                  <img
+                    src="/images/products/Milk Tea.jpg"
+                    alt={`Cup ${num}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Plus Icon */}
+            <span className="text-amber-600 dark:text-amber-400 font-black text-sm px-1">+</span>
+
+            {/* 1 Free Cup in Glowing Badge */}
+            <div className="relative">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-amber-500 shadow-md ring-4 ring-amber-400/20 shrink-0 bg-amber-100">
+                <img
+                  src="/images/products/Milk Tea.jpg"
+                  alt="Free Cup"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-sm animate-bounce">
+                FREE
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

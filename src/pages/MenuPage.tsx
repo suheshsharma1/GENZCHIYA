@@ -14,6 +14,7 @@ import { PaymentModal } from '../components/PaymentModal';
 import { PaymentLogo } from '../components/PaymentLogo';
 import { TableSelectionModal } from '../components/TableSelectionModal';
 import { CelebrationModal } from '../components/CelebrationModal';
+import { CompactOffers } from '../components/CompactOffers';
 import { isSaturday, isTeaProduct } from '../utils/pricing';
 
 export const MenuPage: React.FC = () => {
@@ -397,8 +398,11 @@ export const MenuPage: React.FC = () => {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 mt-6">
-        
+      <main className="max-w-7xl mx-auto px-4 mt-4">
+
+        {/* Compact Offers */}
+        <CompactOffers />
+
         {/* Search Bar */}
         <div className="relative max-w-lg mx-auto mb-6">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
@@ -439,18 +443,6 @@ export const MenuPage: React.FC = () => {
           })}
         </div>
 
-        <div className="-mx-4 px-4 mb-3">
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl px-4 py-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Ticket size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Special Offer</span>
-            </div>
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-              Buy 5 cups of the same item and get 1 free. This applies to all items in the menu.
-            </p>
-          </div>
-        </div>
-
         {/* 2. Products Grid */}
         <div className="mt-6">
           <div className="flex justify-between items-center mb-4">
@@ -470,81 +462,110 @@ export const MenuPage: React.FC = () => {
               </p>
             </div>
           ) : (
-<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-               {filteredProducts.map((product) => {
-                 return (
-                   <motion.div
-                     layout
-                     key={product.id}
-                     onClick={() => product.available && handleOpenCustomizations(product)}
-                     className={`relative bg-gradient-to-br from-[#174C3C] via-[#1a5c48] to-[#174C3C] rounded-[24px] overflow-hidden shadow-lg shadow-black/20 border border-white/10 flex flex-col justify-between group transition-all hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-1 cursor-pointer ${
-                       !product.available ? 'opacity-70 cursor-not-allowed' : ''
-                     }`}
-                   >
-                     {/* Decorative glow */}
-                     <div className="absolute inset-0 bg-gradient-to-br from-[#D4A055]/10 via-transparent to-[#FAF7F2]/5 pointer-events-none" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {filteredProducts.map((product) => {
+                const fallbackImage = 
+                  product.category === 'tea' ? 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=500&q=80' :
+                  product.category === 'coffee' ? 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&q=80' :
+                  'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80';
 
-                      <div className="relative aspect-square overflow-hidden bg-slate-900">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
+                return (
+                  <motion.div
+                    layout
+                    key={product.id}
+                    onClick={() => product.available && handleOpenCustomizations(product)}
+                    className={`group relative bg-white dark:bg-brand-dark-card rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-slate-200/80 dark:border-brand-dark-border/60 hover:border-brand-emerald/40 dark:hover:border-brand-amber/40 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 cursor-pointer ${
+                      !product.available ? 'opacity-70 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {/* Top Image Section */}
+                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-900">
+                      <img
+                        src={product.image || fallbackImage}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = fallbackImage;
+                        }}
+                      />
 
-                       {/* Gradient overlay */}
-                       <div className="absolute inset-0 bg-gradient-to-t from-[#174C3C]/80 via-transparent to-transparent pointer-events-none" />
+                      {/* Soft scrim overlay at bottom */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 pointer-events-none" />
 
-                       {/* Veg/Non-veg label removed */}
+                      {/* Featured / Special Badge */}
+                      {product.featured && (
+                        <div className="absolute top-2.5 left-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                          <Sparkles size={10} className="fill-white" />
+                          <span>Special</span>
+                        </div>
+                      )}
 
-                       {/* Favorite removed */}
+                      {/* Prep Time Badge */}
+                      {product.preparationTime && (
+                        <div className="absolute top-2.5 right-2.5 bg-black/50 backdrop-blur-md text-white/95 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20 flex items-center gap-1">
+                          <Clock size={10} className="text-amber-400" />
+                          <span>{product.preparationTime} min</span>
+                        </div>
+                      )}
 
-                       {/* Out of Stock Overlay */}
-                       {!product.available && (
-                         <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center">
-                           <span className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-md tracking-wider">
-                             Sold Out
-                           </span>
-                         </div>
-                       )}
-                     </div>
+                      {/* Customization options indicator */}
+                      {product.customizations && product.customizations.length > 0 && (
+                        <div className="absolute bottom-2 left-2.5 text-[9px] font-extrabold text-white/90 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md border border-white/10 uppercase tracking-widest">
+                          Customizable
+                        </div>
+                      )}
 
-                     <div className="relative p-4 flex-1 flex flex-col justify-between space-y-3">
-                       <div>
-                         <h4 className="font-bold text-sm leading-tight text-[#FAF7F2] group-hover:text-[#D4A055] transition-colors line-clamp-1">
-                           {product.name}
-                         </h4>
-                         <p className="text-[11px] text-white/50 dark:text-slate-500 mt-1 line-clamp-2 leading-relaxed font-normal">
-                           {product.description}
-                         </p>
-                       </div>
+                      {/* Out of Stock Overlay */}
+                      {!product.available && (
+                        <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] flex items-center justify-center">
+                          <span className="bg-red-600 text-white font-black text-xs uppercase px-3.5 py-1.5 rounded-xl tracking-wider shadow-lg">
+                            Sold Out
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                       <div className="flex justify-between items-center pt-2">
-                         <span className="font-extrabold text-sm text-[#D4A055]">
-                           Rs. {product.price}
-                         </span>
+                    {/* Bottom Details Section */}
+                    <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between gap-3">
+                      <div>
+                        <h4 className="font-extrabold text-sm sm:text-base leading-tight text-slate-900 dark:text-white group-hover:text-brand-emerald dark:group-hover:text-brand-amber transition-colors line-clamp-1">
+                          {product.name}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed font-medium">
+                          {product.description}
+                        </p>
+                      </div>
 
-                         {product.available ? (
-                           <button
-                             onClick={() => handleOpenCustomizations(product)}
-                             className="bg-[#D4A055]/20 hover:bg-[#D4A055] text-[#FAF7F2] hover:text-[#174C3C] font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-[#D4A055]/30"
-                           >
-                             <Plus size={12} className="stroke-[3]" />
-                             <span>Add</span>
-                           </button>
-                         ) : (
-                           <span className="text-[10px] font-semibold text-white/40 uppercase">
-                             Unavailable
-                           </span>
-                         )}
-                       </div>
-                     </div>
-                   </motion.div>
-                 );
-               })}
-             </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-brand-dark-border/40">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none">Price</span>
+                          <span className="font-black text-base sm:text-lg text-brand-emerald dark:text-brand-amber font-mono">
+                            Rs. {product.price}
+                          </span>
+                        </div>
+
+                        {product.available ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCustomizations(product);
+                            }}
+                            className="bg-brand-emerald hover:bg-brand-sage dark:bg-brand-amber dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-brand-emerald/15 dark:shadow-brand-amber/15 hover:shadow-lg active:scale-95 cursor-pointer"
+                          >
+                            <Plus size={14} className="stroke-[3]" />
+                            <span>Add</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">
+                            Unavailable
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </div>
       </main>
@@ -1021,61 +1042,82 @@ export const MenuPage: React.FC = () => {
     </AnimatePresence>
       <AnimatePresence>
         {showCheckout && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCheckout(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-md"
             />
 
             {/* Modal Body */}
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-2xl p-6 shadow-2xl z-10 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-brand-dark-border/40"
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+              className="relative w-full max-w-md bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl z-10 text-slate-800 dark:text-slate-100 border border-slate-100/80 dark:border-brand-dark-border/40 overflow-hidden"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-bold text-brand-emerald dark:text-white font-brand-serif">
-                  Complete Your Order
-                </h4>
-                <button
-                  onClick={() => setShowCheckout(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
+              {/* ── Decorative Header Banner ── */}
+              <div className="relative bg-gradient-to-r from-brand-emerald to-brand-sage dark:from-brand-dark-card dark:to-brand-dark-bg px-5 pt-5 pb-8 overflow-hidden">
+                {/* Background decorative blobs */}
+                <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
+                <div className="absolute top-2 right-10 w-16 h-16 rounded-full bg-white/8" />
+                <div className="absolute bottom-0 left-0 w-full h-4 bg-white dark:bg-brand-dark-card rounded-t-3xl" />
+
+                <div className="relative flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">☕</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">GENZCHIYA</span>
+                    </div>
+                    <h4 className="text-xl font-black text-white leading-tight">Complete Your Order</h4>
+                    <p className="text-[11px] text-white/70 font-medium mt-0.5">
+                      {cart.length} item{cart.length !== 1 ? 's' : ''} · Rs. {cartGrandTotal.toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowCheckout(false)}
+                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/35 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleCheckoutSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+              <form onSubmit={handleCheckoutSubmit} className="px-5 pb-5 space-y-4">
+                {/* Table Number */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded bg-brand-emerald/10 text-brand-emerald flex items-center justify-center text-[10px]">🪑</span>
                     Table Number
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(e.target.value)}
-                    placeholder="E.g., 5"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/10 outline-none text-xs font-semibold dark:text-white"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={tableNumber}
+                      onChange={(e) => setTableNumber(e.target.value)}
+                      placeholder="E.g., 5"
+                      className="w-full pl-4 pr-4 py-3 rounded-xl border-2 border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg focus:border-brand-emerald dark:focus:border-brand-amber focus:bg-white dark:focus:bg-brand-dark-card focus:ring-0 outline-none text-sm font-bold dark:text-white transition-all placeholder:font-normal placeholder:text-slate-300"
+                    />
+                  </div>
                 </div>
 
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Pre-order cooking preferences
+                {/* Cooking Preferences */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded bg-brand-emerald/10 text-brand-emerald flex items-center justify-center text-[10px]">📝</span>
+                    Cooking Preferences
                   </label>
                   <input
                     type="text"
                     value={checkoutNotes}
                     onChange={(e) => setCheckoutNotes(e.target.value)}
-                    placeholder="E.g., Serve hot drinks first..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/10 outline-none text-xs font-semibold dark:text-white"
+                    placeholder="E.g., Serve hot drinks first, less sugar..."
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-brand-dark-border bg-slate-50 dark:bg-brand-dark-bg focus:border-brand-emerald dark:focus:border-brand-amber focus:bg-white dark:focus:bg-brand-dark-card focus:ring-0 outline-none text-sm font-bold dark:text-white transition-all placeholder:font-normal placeholder:text-slate-300"
                   />
                  </div>
 
@@ -1084,54 +1126,104 @@ export const MenuPage: React.FC = () => {
                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
                      Select Payment Method
                    </label>
-                   <div className="grid grid-cols-2 gap-2">
+                   <div className="grid grid-cols-2 gap-3">
+
+                     {/* KHALTI CARD */}
                      <button
                        type="button"
                        onClick={() => setPaymentMethod('khalti')}
-                       className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                       className={`relative overflow-hidden rounded-2xl border-2 text-left transition-all duration-200 cursor-pointer group ${
                          paymentMethod === 'khalti'
-                           ? 'border-[#5C2D91] bg-[#5C2D91]/10 shadow-lg shadow-[#5C2D91]/20'
-                           : 'border-slate-200 dark:border-brand-dark-border hover:border-[#5C2D91]/50 hover:bg-[#5C2D91]/5'
+                           ? 'border-[#E8192C] shadow-xl shadow-[#E8192C]/25'
+                           : 'border-slate-200 dark:border-brand-dark-border hover:border-[#E8192C]/50 hover:shadow-lg hover:shadow-[#E8192C]/10'
                        }`}
                      >
-                       <PaymentLogo provider="khalti" className="w-10 h-10" />
-                       <span className={`text-[10px] font-black uppercase tracking-wider ${
-                         paymentMethod === 'khalti' ? 'text-[#5C2D91]' : 'text-slate-600 dark:text-slate-300'
-                       }`}>Khalti</span>
-                       <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Digital Wallet</span>
+                       <div className={`absolute inset-0 transition-opacity duration-200 ${paymentMethod === 'khalti' ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                         style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%)' }}
+                       />
+                       <div className={`absolute inset-0 hidden dark:block transition-opacity duration-200 ${paymentMethod === 'khalti' ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                         style={{ background: 'linear-gradient(135deg, #2d0a0a 0%, #1a0505 100%)' }}
+                       />
+                       <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-[#E8192C]/8 group-hover:bg-[#E8192C]/15 transition-colors" />
+                       <div className="absolute -bottom-3 -right-2 w-12 h-12 rounded-full bg-[#E8192C]/5" />
+                       <div className="relative p-3 flex flex-col gap-2">
+                         <div className="flex items-start justify-between gap-1">
+                           {/* Real Khalti logo — wide horizontal format */}
+                           <PaymentLogo provider="khalti" className="w-24 h-14" />
+                           {paymentMethod === 'khalti' && (
+                             <div className="w-5 h-5 rounded-full bg-[#E8192C] flex items-center justify-center shrink-0 mt-1">
+                               <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                             </div>
+                           )}
+                         </div>
+                         <div className="flex flex-wrap gap-1">
+                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#E8192C]/10 text-[#E8192C]">⚡ Instant</span>
+                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#E8192C]/10 text-[#E8192C]">🔒 Secure</span>
+                         </div>
+                       </div>
                      </button>
 
+                     {/* CASH CARD */}
                      <button
                        type="button"
                        onClick={() => setPaymentMethod('cash')}
-                       className={`p-3 rounded-xl border-2 text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                       className={`relative overflow-hidden rounded-2xl border-2 text-left transition-all duration-200 cursor-pointer group ${
                          paymentMethod === 'cash'
-                           ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 shadow-lg shadow-emerald-500/20'
-                           : 'border-slate-200 dark:border-brand-dark-border hover:border-emerald-500/50 hover:bg-emerald-50/50'
+                           ? 'border-emerald-500 shadow-xl shadow-emerald-500/30'
+                           : 'border-slate-200 dark:border-brand-dark-border hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10'
                        }`}
                      >
-                       <PaymentLogo provider="cash" className="w-10 h-10" />
-                       <span className={`text-[10px] font-black uppercase tracking-wider ${
-                         paymentMethod === 'cash' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'
-                       }`}>Cash</span>
-                       <span className="text-[8px] uppercase tracking-wider font-semibold text-slate-400">Pay at Counter</span>
+                       <div className={`absolute inset-0 transition-opacity duration-200 ${paymentMethod === 'cash' ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                         style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' }}
+                       />
+                       <div className={`absolute inset-0 hidden dark:block transition-opacity duration-200 ${paymentMethod === 'cash' ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                         style={{ background: 'linear-gradient(135deg, #0d2d1e 0%, #062010 100%)' }}
+                       />
+                       <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-emerald-400/10 group-hover:bg-emerald-400/20 transition-colors" />
+                       <div className="absolute -bottom-3 -right-2 w-12 h-12 rounded-full bg-yellow-400/10" />
+                       <div className="relative p-3 flex flex-col gap-2">
+                         <div className="flex items-center gap-2">
+                           <PaymentLogo provider="cash" className="w-12 h-12 drop-shadow-md" />
+                           <div className="min-w-0">
+                             <p className={`text-xs font-black uppercase tracking-wide ${paymentMethod === 'cash' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>Cash</p>
+                             <p className="text-[9px] font-semibold text-slate-400">Pay at Counter</p>
+                           </div>
+                           {paymentMethod === 'cash' && (
+                             <div className="ml-auto w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                               <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                             </div>
+                           )}
+                         </div>
+                         <div className="flex flex-wrap gap-1">
+                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">💵 No App</span>
+                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">✅ Simple</span>
+                         </div>
+                       </div>
                      </button>
+
                    </div>
                  </div>
 
-                <div className="p-3 bg-brand-emerald/8 text-brand-emerald dark:text-brand-mint border border-brand-emerald/15 dark:border-brand-mint/20 rounded-xl flex gap-2 items-center text-[10px]">
-                  <HeartHandshake size={15} className="shrink-0" />
-                  <p className="leading-relaxed font-semibold">
-                    Your order will be sent to our kitchen right away. Staff will call your name when ready! ☕
+                {/* Kitchen note */}
+                <div className="p-3 bg-brand-emerald/8 dark:bg-brand-amber/8 text-brand-emerald dark:text-brand-amber border border-brand-emerald/15 dark:border-brand-amber/15 rounded-2xl flex gap-3 items-start">
+                  <span className="text-lg shrink-0 mt-0.5"><HeartHandshake size={16} className="text-brand-emerald dark:text-brand-amber" /></span>
+                  <p className="text-[11px] leading-relaxed font-semibold">
+                    Your order goes straight to our kitchen! Staff will call your name when it's ready. ☕
                   </p>
                 </div>
 
                 {/* Submit button */}
                 <button
                   type="submit"
-                  className="w-full bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-extrabold py-3.5 rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider cursor-pointer"
+                  className="w-full relative overflow-hidden bg-brand-emerald dark:bg-brand-amber hover:bg-brand-sage dark:hover:bg-brand-gold text-white dark:text-brand-dark-bg font-black py-4 rounded-2xl shadow-xl shadow-brand-emerald/30 dark:shadow-brand-amber/20 transition-all text-sm uppercase tracking-widest cursor-pointer group"
                 >
-                  Pay & Place Order (Rs. {cartGrandTotal.toLocaleString()})
+                  <span className="relative z-10 flex items-center justify-center gap-3">
+                    <span>Pay &amp; Place Order</span>
+                    <span className="bg-white/20 group-hover:bg-white/30 transition-colors px-2.5 py-1 rounded-lg font-black text-xs">
+                      Rs. {cartGrandTotal.toLocaleString()}
+                    </span>
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 </button>
               </form>
             </motion.div>

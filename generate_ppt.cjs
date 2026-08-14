@@ -518,7 +518,7 @@ addTwoColSlide(
 }
 
 // ─── Save File ───────────────────────────────────────────────────────────────
-const OUTPUT = 'C:/Users/suhes/.gemini/antigravity-ide/brain/919c2a76-5f74-40f1-bcc2-1c9b2816dec3/GenZChiya_Viva_Presentation.pptx';
+const OUTPUT = 'GenZChiya_Viva_Presentation.pptx';
 pptx.writeFile({ fileName: OUTPUT })
   .then(() => console.log('✅  PPT saved to:', OUTPUT))
   .catch(err => { console.error('❌  Error:', err); process.exit(1); });

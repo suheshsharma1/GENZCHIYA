@@ -377,7 +377,7 @@ export const products: Product[] = [
     description: "Orange-flavoured Fanta served cold.",
     price: 80,
     category: "cold-drinks",
-    image: "/images/products/Fanta.jpg",
+    image: "/images/products/Fanta-Naranja-1.jpg",
     available: true,
     customizations: coldDrinkCustomizations,
     preparationTime: 1

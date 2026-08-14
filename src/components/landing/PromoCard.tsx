@@ -94,50 +94,25 @@ export const PromoCard: React.FC = () => {
             </motion.span>
           </div>
 
-          {/* Tea Cup Illustration */}
-          <div className="relative z-10 flex justify-center mb-5">
+          {/* Real Matka Tea Cup Image — floating with soft drop shadow */}
+          <div className="relative z-10 flex justify-center mb-3">
             <motion.div
-              animate={{ y: [0, -3, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="relative"
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
             >
-              {/* Cup body */}
-              <div className="w-20 h-24 rounded-b-3xl rounded-t-lg bg-gradient-to-b from-[#FAF7F2] to-[#EFE6DA] shadow-lg relative overflow-hidden">
-                {/* Cup rim */}
-                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-24 h-4 bg-[#FAF7F2] rounded-full border-2 border-[#EFE6DA]" />
-                {/* Cup handle */}
-                <div className="absolute right-[-16px] top-1/2 -translate-y-1/2 w-5 h-10 border-2 border-[#EFE6DA] border-l-0 rounded-r-full" />
-                {/* Tea inside */}
-                <div className="absolute bottom-3 left-3 right-3 h-8 rounded-full bg-gradient-to-t from-[#E4002B] to-[#c20022] opacity-80" />
-                {/* Steam lines on tea */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-[#E4002B]/30 rounded-full" />
-              </div>
-
-              {/* Steam particles */}
-              {steamParticles.map((particle) => (
-                <motion.div
-                  key={particle.id}
-                  className="absolute bg-white/40 rounded-full"
-                  style={{
-                    left: `${particle.x}%`,
-                    top: `${particle.y}%`,
-                    width: particle.size,
-                    height: particle.size,
-                  }}
-                  animate={{
-                    y: [0, -30 - Math.random() * 20],
-                    x: [0, particle.drift],
-                    opacity: [particle.opacity, 0],
-                    scale: [1, 0.3],
-                  }}
-                  transition={{
-                    duration: particle.duration,
-                    repeat: Infinity,
-                    repeatDelay: particle.delay,
-                    ease: 'easeOut',
-                  }}
-                />
-              ))}
+              <img
+                src="/images/products/Matka Tea.png"
+                alt="Matka Tea"
+                draggable={false}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/images/matka_chai.png';
+                }}
+                className="w-28 h-28 object-contain select-none"
+                style={{
+                  filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.35))',
+                  opacity: 0.92,
+                }}
+              />
             </motion.div>
           </div>
 

@@ -77,6 +77,7 @@ interface AppContextType {
   getSalesReport: () => SalesReport;
   resetAllData: () => void;
   clearPaymentHistory: () => void;
+  clearOrderHistory: () => void;
   injectDemoOrder: (type: 'matka' | 'bogo' | 'rush') => Order;
   logoutStaff: () => void;
   loginStaff: (role: 'cashier' | 'kitchen') => void;
@@ -204,9 +205,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const loadProducts = (prods: Product[]): Product[] => {
       return prods.map(p => {
-        // Always refresh image from the source product data so external/relative paths stay current
+        // Only refresh image from source if the saved product has no custom image.
+        // If the cashier uploaded a custom image (base64/blob), preserve it.
         const match = initialProducts.find(ip => ip.id === p.id);
-        if (match) {
+        if (match && !p.image) {
           return { ...p, image: match.image };
         }
         return p;
@@ -307,21 +309,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [orderHistory, setOrderHistory] = useState<Order[]>(() => {
+    // One-time migration: wipe any old mock/demo orders (id prefix 'CS-1')
+    const HISTORY_CLEAN_VERSION = 'v2-no-mocks';
+    const cleanedVersion = localStorage.getItem('gc_history_clean_version');
+    if (cleanedVersion !== HISTORY_CLEAN_VERSION) {
+      localStorage.removeItem('orderHistory');
+      localStorage.removeItem('gc_order_history');
+      localStorage.setItem('gc_history_clean_version', HISTORY_CLEAN_VERSION);
+      return [];
+    }
     const saved = localStorage.getItem('orderHistory') || localStorage.getItem('gc_order_history');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          // Extra guard: filter out any leftover mock orders
+          return parsed.filter((o: Order) => !o.id.startsWith('CS-1'));
         }
       } catch (err) {
         console.error('Failed to parse gc_order_history from storage', err);
       }
     }
-    const mocks = generateMockOrders(initialProducts);
-    localStorage.setItem('orderHistory', JSON.stringify(mocks));
-    localStorage.setItem('gc_order_history', JSON.stringify(mocks));
-    return mocks;
+    return [];
   });
 
   // Per-table cart map: { tableNumber: CartItem[] }
@@ -1489,6 +1498,14 @@ const dismissCelebration = () => {
     setActiveTable('');
   };
 
+  const clearOrderHistory = () => {
+    localStorage.removeItem('orderHistory');
+    localStorage.removeItem('gc_order_history');
+    // Also bump the migration flag so the cleared state persists
+    localStorage.setItem('gc_history_clean_version', 'v2-no-mocks');
+    setOrderHistory([]);
+  };
+
   // ─── Automatic Daily Payment History Reset ───────────────────────────────
   // Clears ONLY the active orders for the new day — preserves orderHistory,
   // products, categories, coupons, QR tables, settings, and all analytics.
@@ -1657,6 +1674,7 @@ const dismissCelebration = () => {
       getSalesReport,
       resetAllData,
       clearPaymentHistory,
+      clearOrderHistory,
       injectDemoOrder,
         isDarkMode,
         toggleTheme,

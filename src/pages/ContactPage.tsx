@@ -1,15 +1,15 @@
 import React from 'react';
 import { Navbar } from '../components/landing/Navbar';
-import { AboutSection } from '../components/landing/AboutSection';
+import { ContactSection } from '../components/landing/ContactSection';
 import { Footer } from '../components/landing/Footer';
 
-export const AboutPage: React.FC = () => {
+export const ContactPage: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-brand-cream dark:bg-brand-dark-bg transition-colors duration-300 flex flex-col justify-between overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 pt-24 pb-12">
-        <AboutSection />
+        <ContactSection />
       </main>
 
       <Footer />
@@ -17,4 +17,4 @@ export const AboutPage: React.FC = () => {
   );
 };
 
-export default AboutPage;
+export default ContactPage;
